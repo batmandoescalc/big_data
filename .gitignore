@@ -5,3 +5,7 @@ data/
 runtime/
 __pycache__/
 *.py[cod]
+HANDOFF.local.md
+*.local.md
+*.swp
+preflight-output/
