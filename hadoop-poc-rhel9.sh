@@ -6,7 +6,7 @@
 # What this script does:
 # - Installs Java + creates hadoop user
 # - Downloads Hadoop binary distribution
-# - Sets up passwordless SSH (optional, recommended)
+# - Uses local systemd services; does not provision SSH keys
 # - Writes core-site.xml, hdfs-site.xml, mapred-site.xml, yarn-site.xml
 # - Formats HDFS (on hadoop-0 only) and starts HDFS + YARN
 # - Performs a quick smoke test and prints useful URLs/commands
@@ -15,16 +15,17 @@
 #   sudo bash hadoop-poc-rhel9.sh
 #
 # Assumptions:
-# - Hostnames: hadoop-0..hadoop-3 resolve correctly (DNS or /etc/hosts)
+# - Supply the real, resolvable controller and worker names at the prompts
 # - You want a quick POC (not hardened, not HA)
 # - RHEL9 repos available
 #
 # Notes:
-# - Default Hadoop version: 3.3.6 (change when prompted)
+# - Default Hadoop version: 3.4.3 (change when prompted)
 # - Uses systemd services for HDFS/YARN components
 # - Uses /data/hadoop/{hdfs,nm,tmp} by default
 #
-# If you want this to also manage /etc/hosts, say yes when prompted.
+# Prepare and mount the assigned data disk before running this installer.
+# Use --check to validate the answers and prerequisites without changing the VM.
 
 set -euo pipefail
 
@@ -32,16 +33,15 @@ set -euo pipefail
 die() { echo "ERROR: $*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "Run as root (sudo)."; }
 cmd() { echo "+ $*"; "$@"; }
-have() { command -v "$1" >/dev/null 2>&1; }
 
 ask() {
   local prompt="$1" default="${2:-}"
   local ans=""
   if [[ -n "$default" ]]; then
-    read -r -p "$prompt [$default]: " ans || true
+    read -r -p "$prompt [$default]: " ans || die "Input ended at: $prompt"
     echo "${ans:-$default}"
   else
-    read -r -p "$prompt: " ans || true
+    read -r -p "$prompt: " ans || die "Input ended at: $prompt"
     echo "$ans"
   fi
 }
@@ -51,66 +51,56 @@ ask_yn() {
   local ans=""
   local hint="y/N"
   [[ "$default" =~ ^[Yy]$ ]] && hint="Y/n"
-  read -r -p "$prompt ($hint): " ans || true
+  read -r -p "$prompt ($hint): " ans || die "Input ended at: $prompt"
   ans="${ans:-$default}"
   [[ "$ans" =~ ^[Yy]$ ]]
 }
 
-assert_hostname() {
-  local hn
-  hn="$(hostname -s)"
-  if [[ ! "$hn" =~ ^hadoop-[0-3]$ ]]; then
-    echo "WARNING: Hostname is '$hn' but expected hadoop-0..hadoop-3."
-    echo "This is OK if you configure roles/hosts correctly, but defaults assume those names."
+validate_host() {
+  [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || die "Invalid hostname: $1"
+  getent ahostsv4 "$1" >/dev/null || die "Hostname does not resolve: $1"
+}
+
+validate_storage() {
+  [[ "$DATA_MOUNT" =~ ^/[A-Za-z0-9_/-]+$ && "$DATA_MOUNT" != / ]] || die "Invalid data mount point."
+  [[ "$DATA_BASE" =~ ^/[A-Za-z0-9_/-]+$ ]] || die "Invalid data directory."
+  [[ "$(realpath -m "$DATA_MOUNT")" == "$DATA_MOUNT" ]] || die "Use a canonical data mount path."
+  [[ "$(realpath -m "$DATA_BASE")" == "$DATA_BASE" ]] || die "Use a canonical data directory path."
+  [[ "$DATA_BASE" == "$DATA_MOUNT/"* ]] || die "Data directory must be beneath the data mount."
+  [[ ! -e "$DATA_BASE" || -d "$DATA_BASE" ]] || die "Data path exists and is not a directory."
+  mountpoint -q "$DATA_MOUNT" || die "Mount the assigned data disk at $DATA_MOUNT first."
+  [[ "$(findmnt -n -o MAJ:MIN -T "$DATA_MOUNT")" != "$(findmnt -n -o MAJ:MIN -T /)" ]] || die "Data must not be on the root filesystem."
+  case ",$(findmnt -n -o OPTIONS -T "$DATA_MOUNT")," in
+    *,noexec,*|*,ro,*) die "The data mount must allow writes and YARN task execution." ;;
+  esac
+  [[ "$(findmnt -n -o FSTYPE -T "$DATA_MOUNT")" =~ ^(xfs|ext4)$ ]] || die "Expected a local XFS or ext4 data filesystem."
+  if [[ -e "$DATA_BASE" ]] && [[ -n "$(find "$DATA_BASE" -mindepth 1 -maxdepth 1 -print -quit)" ]]; then
+    die "Existing data found at $DATA_BASE. This installer only handles a fresh cluster."
   fi
 }
 
-append_hosts_if_needed() {
-  local do_hosts="$1"
-  [[ "$do_hosts" == "yes" ]] || return 0
-
-  echo "Enter the IPs for each host (used to populate /etc/hosts)."
-  local ip0 ip1 ip2 ip3
-  ip0="$(ask "IP for hadoop-0")"
-  ip1="$(ask "IP for hadoop-1")"
-  ip2="$(ask "IP for hadoop-2")"
-  ip3="$(ask "IP for hadoop-3")"
-
-  for pair in \
-    "$ip0 hadoop-0" \
-    "$ip1 hadoop-1" \
-    "$ip2 hadoop-2" \
-    "$ip3 hadoop-3"
-  do
-    local ip host
-    ip="$(awk '{print $1}' <<<"$pair")"
-    host="$(awk '{print $2}' <<<"$pair")"
-    [[ -n "$ip" && -n "$host" ]] || die "Missing IP/host for /etc/hosts."
-    if ! grep -qE "^[[:space:]]*$ip[[:space:]].*\b$host\b" /etc/hosts; then
-      echo "Adding to /etc/hosts: $ip $host"
-      echo "$ip $host" >> /etc/hosts
-    else
-      echo "/etc/hosts already has: $ip $host"
-    fi
-  done
-}
-
-write_file() {
-  local path="$1"
-  shift
-  install -d -m 0755 "$(dirname "$path")"
-  cat >"$path" <<'EOF'
-'"$@"'
-EOF
-}
-
-xml_escape() {
-  sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g' -e "s/'/\&apos;/g"
+create_data_dirs() {
+  # Set ownership and mode on every ancestor. RHEL's root umask can otherwise
+  # leave intermediate directories inaccessible to the Hadoop service account.
+  cmd install -d -o "$HADOOP_USER" -g "$HADOOP_GROUP" -m 0750 \
+    "$DATA_BASE" "$DATA_BASE/hdfs" "$DATA_BASE/nm" \
+    "$HDFS_NAMENODE_DIR" "$HDFS_DATANODE_DIR" \
+    "$YARN_NM_LOCAL_DIR" "$YARN_NM_LOG_DIR" "$HADOOP_TMP_DIR" "$DATA_BASE/logs"
 }
 
 # ---------- script begins ----------
+CHECK_ONLY=no
+case "${1:-}" in
+  --check) CHECK_ONLY=yes ;;
+  --help) echo "Usage: $0 [--check] (interactive, run as root on each prepared VM)"; exit 0 ;;
+  "") ;;
+  *) die "Unknown argument: $1" ;;
+esac
+[[ $# -le 1 ]] || die "Too many arguments."
 need_root
-assert_hostname
+# shellcheck disable=SC1091
+source /etc/os-release
+[[ "$ID" == rhel && "$VERSION_ID" == 9.* ]] || die "This installer requires RHEL 9."
 
 echo "Hadoop POC installer for RHEL9 (4-node cluster)."
 
@@ -123,13 +113,8 @@ WORKERS_DEFAULT="hadoop-1,hadoop-2,hadoop-3"
 WORKERS_CSV="$(ask "Worker hostnames CSV (DataNodes/NodeManagers)" "$WORKERS_DEFAULT")"
 IFS=',' read -r -a WORKERS <<<"$WORKERS_CSV"
 
-# Network/hosts
-if ask_yn "Do you want to populate /etc/hosts with hadoop-0..3 IPs?" "n"; then
-  append_hosts_if_needed "yes"
-fi
-
 # Hadoop settings
-HADOOP_VERSION="$(ask "Hadoop version" "3.3.6")"
+HADOOP_VERSION="$(ask "Hadoop version" "3.4.3")"
 HADOOP_MIRROR="$(ask "Apache mirror base URL" "https://downloads.apache.org/hadoop/common")"
 HADOOP_TGZ="hadoop-${HADOOP_VERSION}.tar.gz"
 HADOOP_URL="${HADOOP_MIRROR}/hadoop-${HADOOP_VERSION}/${HADOOP_TGZ}"
@@ -143,7 +128,8 @@ HADOOP_INSTALL_DIR="${HADOOP_HOME_BASE}/hadoop-${HADOOP_VERSION}"
 JAVA_PKG="$(ask "Java package (RHEL)" "java-11-openjdk-devel")"
 
 # Data dirs
-DATA_BASE="$(ask "Base data directory" "/data/hadoop")"
+DATA_MOUNT="$(ask "Prepared data disk mount point" "/data")"
+DATA_BASE="$(ask "Base data directory" "${DATA_MOUNT}/hadoop")"
 HDFS_NAMENODE_DIR="${DATA_BASE}/hdfs/nn"
 HDFS_DATANODE_DIR="${DATA_BASE}/hdfs/dn"
 YARN_NM_LOCAL_DIR="${DATA_BASE}/nm/local"
@@ -155,19 +141,52 @@ NN_RPC_PORT="$(ask "NameNode RPC port" "8020")"
 NN_HTTP_PORT="$(ask "NameNode Web UI port" "9870")"
 RM_HTTP_PORT="$(ask "ResourceManager Web UI port" "8088")"
 
-# Optional: disable firewall/selinux (POC)
-if ask_yn "POC-only: set SELinux to permissive now?" "n"; then
-  if have getenforce; then
-    cmd setenforce 0 || true
-    sed -ri 's/^SELINUX=.*/SELINUX=permissive/' /etc/selinux/config || true
-  fi
+# Validate every answer before making any changes.
+validate_host "$MASTER_HOST"
+[[ "${#WORKERS[@]}" -eq 3 ]] || die "Expected exactly three workers."
+declare -A NODE_NAMES=()
+for host in "$MASTER_HOST" "${WORKERS[@]}"; do
+  validate_host "$host"
+  short="${host%%.*}"
+  [[ -z "${NODE_NAMES[$short]:-}" ]] || die "Duplicate node: $host"
+  NODE_NAMES[$short]=1
+done
+[[ -n "${NODE_NAMES[$THIS_HOST]:-}" ]] || die "This VM is not in the controller/worker list."
+IS_MASTER=no
+[[ "$THIS_HOST" != "${MASTER_HOST%%.*}" ]] || IS_MASTER=yes
+[[ "$HADOOP_VERSION" =~ ^3\.4\.[0-9]+$ ]] || die "This Java 11 configuration targets Hadoop 3.4.x."
+[[ "$HADOOP_MIRROR" == https://downloads.apache.org/hadoop/common ]] || die "Use the official HTTPS download location."
+[[ "$HADOOP_USER" =~ ^[a-z_][a-z0-9_-]*$ && "$HADOOP_GROUP" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "Invalid service account."
+[[ "$HADOOP_USER" != root && "$HADOOP_GROUP" != root ]] || die "Hadoop must not run as root."
+[[ "$JAVA_PKG" == java-11-openjdk-devel ]] || die "This configuration is prepared for Java 11."
+for port in "$NN_RPC_PORT" "$NN_HTTP_PORT" "$RM_HTTP_PORT"; do
+  [[ "$port" =~ ^[1-9][0-9]{3,4}$ ]] && (( port <= 65535 )) || die "Invalid service port: $port"
+done
+[[ "$NN_RPC_PORT" != "$NN_HTTP_PORT" && "$NN_RPC_PORT" != "$RM_HTTP_PORT" && "$NN_HTTP_PORT" != "$RM_HTTP_PORT" ]] || die "Service ports must be distinct."
+REPL="$(ask "HDFS replication factor" "2")"
+[[ "$REPL" =~ ^[123]$ ]] || die "Replication must be between 1 and 3."
+(( $(awk '/^MemTotal:/ {print int($2 / 1024)}' /proc/meminfo) >= 7168 )) || die "This configuration requires at least 7 GiB RAM."
+(( $(nproc) >= 4 )) || die "This configuration requires at least four CPUs."
+validate_storage
+[[ ! -e "$HADOOP_HOME" && ! -L "$HADOOP_HOME" && ! -e "$HADOOP_INSTALL_DIR" ]] || die "Existing Hadoop installation found. Inspect it before proceeding."
+[[ ! -e /etc/profile.d/hadoop.sh ]] || die "Existing Hadoop environment found."
+if compgen -G '/etc/systemd/system/hadoop-*.service' >/dev/null; then
+  die "Existing Hadoop services found. Inspect them before proceeding."
 fi
-if ask_yn "POC-only: stop+disable firewalld now?" "n"; then
-  cmd systemctl disable --now firewalld || true
+if id "$HADOOP_USER" >/dev/null 2>&1; then
+  die "The service account already exists. Inspect it before provisioning a fresh cluster."
 fi
+NODE_ROLE=worker
+[[ "$IS_MASTER" != yes ]] || NODE_ROLE=controller
+printf 'Validated role: %s; mounted data: %s; Hadoop: %s\n' "$NODE_ROLE" "$DATA_BASE" "$HADOOP_VERSION"
+if [[ "$CHECK_ONLY" == yes ]]; then
+  echo "Read-only checks passed. Network connectivity and worker resources still require verification."
+  exit 0
+fi
+ask_yn "Install this fresh Hadoop node with the settings above?" n || die "Installation cancelled."
 
 echo "Installing dependencies..."
-cmd dnf -y install "$JAVA_PKG" wget tar openssh-clients rsync procps-ng
+cmd dnf -y --setopt=install_weak_deps=False install "$JAVA_PKG" curl tar procps-ng
 
 # Create user/group
 if ! getent group "$HADOOP_GROUP" >/dev/null; then
@@ -177,30 +196,30 @@ if ! id "$HADOOP_USER" >/dev/null 2>&1; then
   cmd useradd --system -g "$HADOOP_GROUP" -m -s /bin/bash "$HADOOP_USER"
 fi
 
-# Install Hadoop
-if [[ ! -d "$HADOOP_INSTALL_DIR" ]]; then
-  echo "Downloading Hadoop: $HADOOP_URL"
-  cmd wget -O "/tmp/${HADOOP_TGZ}" "$HADOOP_URL"
-  cmd tar -C "$HADOOP_HOME_BASE" -xzf "/tmp/${HADOOP_TGZ}"
-fi
+# Verify the official archive before extracting it. Keep temporary paths private.
+DOWNLOAD_DIR="$(mktemp -d /var/tmp/hadoop-download.XXXXXXXX)"
+trap 'rm -rf -- "$DOWNLOAD_DIR"' EXIT
+cmd curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --retry 3 -o "$DOWNLOAD_DIR/$HADOOP_TGZ" "$HADOOP_URL"
+cmd curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' --retry 3 -o "$DOWNLOAD_DIR/archive.sha512" "${HADOOP_URL}.sha512"
+EXPECTED_HASH="$(grep -Eo '[A-Fa-f0-9]{128}' "$DOWNLOAD_DIR/archive.sha512")"
+[[ "$EXPECTED_HASH" =~ ^[A-Fa-f0-9]{128}$ ]] || die "Invalid SHA-512 checksum response."
+ACTUAL_HASH="$(sha512sum "$DOWNLOAD_DIR/$HADOOP_TGZ")"
+ACTUAL_HASH="${ACTUAL_HASH%% *}"
+[[ "${EXPECTED_HASH,,}" == "$ACTUAL_HASH" ]] || die "Hadoop archive checksum mismatch."
+cmd tar --no-same-owner -C "$HADOOP_HOME_BASE" -xzf "$DOWNLOAD_DIR/$HADOOP_TGZ"
 
 # Symlink /opt/hadoop -> /opt/hadoop-x.y.z
 cmd ln -sfn "$HADOOP_INSTALL_DIR" "$HADOOP_HOME"
 cmd chown -R "$HADOOP_USER:$HADOOP_GROUP" "$HADOOP_INSTALL_DIR"
 
-# Create dirs
-for d in "$HDFS_NAMENODE_DIR" "$HDFS_DATANODE_DIR" "$YARN_NM_LOCAL_DIR" "$YARN_NM_LOG_DIR" "$HADOOP_TMP_DIR"; do
-  cmd mkdir -p "$d"
-  cmd chown -R "$HADOOP_USER:$HADOOP_GROUP" "$d"
-  cmd chmod 0755 "$d"
-done
+# Create all data directories with explicit ownership, including ancestors.
+create_data_dirs
+cmd restorecon "$DATA_MOUNT"
+cmd restorecon -RF "$DATA_BASE"
 
-# Environment for hadoop user
-JAVA_HOME_PATH="$(dirname "$(dirname "$(readlink -f "$(command -v javac 2>/dev/null || command -v java)")")")"
-if [[ -z "$JAVA_HOME_PATH" || ! -d "$JAVA_HOME_PATH" ]]; then
-  # Fallback: common path for RHEL
-  JAVA_HOME_PATH="/usr/lib/jvm/java-11-openjdk"
-fi
+# Select Java 11 explicitly without changing the machine's default Java.
+JAVA_HOME_PATH="$(readlink -f /usr/lib/jvm/java-11-openjdk)"
+[[ -x "$JAVA_HOME_PATH/bin/java" ]] || die "Java 11 installation could not be located."
 
 HADOOP_PROFILE="/etc/profile.d/hadoop.sh"
 cat >"$HADOOP_PROFILE" <<EOF
@@ -208,6 +227,12 @@ cat >"$HADOOP_PROFILE" <<EOF
 export JAVA_HOME="${JAVA_HOME_PATH}"
 export HADOOP_HOME="${HADOOP_HOME}"
 export HADOOP_CONF_DIR="\$HADOOP_HOME/etc/hadoop"
+export HADOOP_MAPRED_HOME="\$HADOOP_HOME"
+export HADOOP_COMMON_HOME="\$HADOOP_HOME"
+export HADOOP_HDFS_HOME="\$HADOOP_HOME"
+export HADOOP_YARN_HOME="\$HADOOP_HOME"
+export HADOOP_LOG_DIR="${DATA_BASE}/logs"
+export HADOOP_HEAPSIZE_MAX="1g"
 export PATH="\$PATH:\$HADOOP_HOME/bin:\$HADOOP_HOME/sbin"
 EOF
 chmod 0644 "$HADOOP_PROFILE"
@@ -247,7 +272,6 @@ cat >"${CONF_DIR}/core-site.xml" <<EOF
 EOF
 
 # hdfs-site.xml
-REPL="$(ask "HDFS replication factor (for 3 workers use 2 or 3)" "2")"
 cat >"${CONF_DIR}/hdfs-site.xml" <<EOF
 <?xml version="1.0"?>
 <configuration>
@@ -278,6 +302,10 @@ cat >"${CONF_DIR}/mapred-site.xml" <<EOF
     <name>mapreduce.framework.name</name>
     <value>yarn</value>
   </property>
+  <property>
+    <name>mapreduce.application.classpath</name>
+    <value>${HADOOP_HOME}/share/hadoop/mapreduce/*:${HADOOP_HOME}/share/hadoop/mapreduce/lib/*</value>
+  </property>
 </configuration>
 EOF
 
@@ -288,6 +316,30 @@ cat >"${CONF_DIR}/yarn-site.xml" <<EOF
   <property>
     <name>yarn.resourcemanager.hostname</name>
     <value>${MASTER_HOST}</value>
+  </property>
+  <property>
+    <name>yarn.resourcemanager.webapp.address</name>
+    <value>${MASTER_HOST}:${RM_HTTP_PORT}</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.address</name>
+    <value>0.0.0.0:8041</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.memory-mb</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.resource.cpu-vcores</name>
+    <value>2</value>
+  </property>
+  <property>
+    <name>yarn.scheduler.maximum-allocation-mb</name>
+    <value>4096</value>
+  </property>
+  <property>
+    <name>yarn.nodemanager.env-whitelist</name>
+    <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_HOME,PATH,LANG,TZ,HADOOP_MAPRED_HOME</value>
   </property>
   <property>
     <name>yarn.nodemanager.aux-services</name>
@@ -306,60 +358,6 @@ EOF
 
 chown -R "$HADOOP_USER:$HADOOP_GROUP" "$CONF_DIR"
 
-# Optional: SSH keys for hadoop user (needed for start-dfs.sh / start-yarn.sh to fan out)
-if ask_yn "Set up passwordless SSH for ${HADOOP_USER} to all nodes (recommended)?" "y"; then
-  # Ensure sshd is up
-  cmd systemctl enable --now sshd
-
-  # Generate key if missing
-  if [[ ! -f "/home/${HADOOP_USER}/.ssh/id_ed25519" ]]; then
-    cmd sudo -u "$HADOOP_USER" mkdir -p "/home/${HADOOP_USER}/.ssh"
-    cmd sudo -u "$HADOOP_USER" chmod 700 "/home/${HADOOP_USER}/.ssh"
-    cmd sudo -u "$HADOOP_USER" ssh-keygen -t ed25519 -N "" -f "/home/${HADOOP_USER}/.ssh/id_ed25519"
-  fi
-
-  PUBKEY="$(cat "/home/${HADOOP_USER}/.ssh/id_ed25519.pub")"
-
-  # Add to local authorized_keys
-  AUTH="/home/${HADOOP_USER}/.ssh/authorized_keys"
-  touch "$AUTH"
-  chown "$HADOOP_USER:$HADOOP_GROUP" "$AUTH"
-  chmod 600 "$AUTH"
-  grep -qF "$PUBKEY" "$AUTH" || echo "$PUBKEY" >>"$AUTH"
-
-  echo "Now we need to copy the public key to other nodes' ${HADOOP_USER} accounts."
-  echo "This requires that the ${HADOOP_USER} account exists on all nodes (we created it)."
-  echo "If SSH prompts for a password, enter the ${HADOOP_USER} password (or use root provisioning)."
-
-  # Ensure the hadoop user can SSH without strict prompts
-  SSHCFG="/home/${HADOOP_USER}/.ssh/config"
-  if [[ ! -f "$SSHCFG" ]]; then
-    cat >"$SSHCFG" <<EOF
-Host hadoop-*
-  StrictHostKeyChecking no
-  UserKnownHostsFile=/dev/null
-EOF
-    chown "$HADOOP_USER:$HADOOP_GROUP" "$SSHCFG"
-    chmod 600 "$SSHCFG"
-  fi
-
-  # Set a password if needed (interactive)
-  if ask_yn "Do you want to set/reset password for ${HADOOP_USER} on THIS node (helps ssh-copy-id)?" "n"; then
-    passwd "$HADOOP_USER"
-  fi
-
-  for host in "$MASTER_HOST" "${WORKERS[@]}"; do
-    echo "Copying key to $host..."
-    # Try ssh-copy-id; if not installed, do a manual append.
-    if have ssh-copy-id; then
-      cmd sudo -u "$HADOOP_USER" ssh-copy-id -i "/home/${HADOOP_USER}/.ssh/id_ed25519.pub" "${HADOOP_USER}@${host}" || true
-    else
-      # Manual: append via ssh
-      cmd sudo -u "$HADOOP_USER" ssh "${HADOOP_USER}@${host}" "mkdir -p ~/.ssh && chmod 700 ~/.ssh && touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && grep -qF '$PUBKEY' ~/.ssh/authorized_keys || echo '$PUBKEY' >> ~/.ssh/authorized_keys" || true
-    fi
-  done
-fi
-
 # systemd units: run daemons without relying on ssh fanout.
 # Master: namenode + resourcemanager
 # Workers: datanode + nodemanager
@@ -375,38 +373,52 @@ write_unit() {
 DAEMON_ENV="Environment=JAVA_HOME=${JAVA_HOME_PATH}
 Environment=HADOOP_HOME=${HADOOP_HOME}
 Environment=HADOOP_CONF_DIR=${HADOOP_HOME}/etc/hadoop
+Environment=HADOOP_MAPRED_HOME=${HADOOP_HOME}
+Environment=HADOOP_COMMON_HOME=${HADOOP_HOME}
+Environment=HADOOP_HDFS_HOME=${HADOOP_HOME}
+Environment=HADOOP_YARN_HOME=${HADOOP_HOME}
+Environment=HADOOP_LOG_DIR=${DATA_BASE}/logs
+Environment=HADOOP_HEAPSIZE_MAX=1g
 Environment=PATH=/usr/sbin:/usr/bin:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin"
 
 # NameNode unit (master only)
 NN_UNIT="[Unit]
 Description=Hadoop HDFS NameNode
-After=network.target
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=${DATA_MOUNT}
+ConditionPathIsMountPoint=${DATA_MOUNT}
 
 [Service]
-Type=forking
+Type=simple
 User=${HADOOP_USER}
 Group=${HADOOP_GROUP}
 ${DAEMON_ENV}
-ExecStart=${HADOOP_HOME}/bin/hdfs --daemon start namenode
-ExecStop=${HADOOP_HOME}/bin/hdfs --daemon stop namenode
+ExecStart=${HADOOP_HOME}/bin/hdfs namenode
+TimeoutStopSec=120
+RestartSec=5
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 "
 
-# DataNode unit (all nodes)
+# DataNode unit (workers only)
 DN_UNIT="[Unit]
 Description=Hadoop HDFS DataNode
-After=network.target
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=${DATA_MOUNT}
+ConditionPathIsMountPoint=${DATA_MOUNT}
 
 [Service]
-Type=forking
+Type=simple
 User=${HADOOP_USER}
 Group=${HADOOP_GROUP}
 ${DAEMON_ENV}
-ExecStart=${HADOOP_HOME}/bin/hdfs --daemon start datanode
-ExecStop=${HADOOP_HOME}/bin/hdfs --daemon stop datanode
+ExecStart=${HADOOP_HOME}/bin/hdfs datanode
+TimeoutStopSec=120
+RestartSec=5
 Restart=on-failure
 
 [Install]
@@ -416,79 +428,77 @@ WantedBy=multi-user.target
 # ResourceManager unit (master only)
 RM_UNIT="[Unit]
 Description=Hadoop YARN ResourceManager
-After=network.target
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=${DATA_MOUNT}
+ConditionPathIsMountPoint=${DATA_MOUNT}
 
 [Service]
-Type=forking
+Type=simple
 User=${HADOOP_USER}
 Group=${HADOOP_GROUP}
 ${DAEMON_ENV}
-ExecStart=${HADOOP_HOME}/bin/yarn --daemon start resourcemanager
-ExecStop=${HADOOP_HOME}/bin/yarn --daemon stop resourcemanager
+ExecStart=${HADOOP_HOME}/bin/yarn resourcemanager
+TimeoutStopSec=120
+RestartSec=5
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 "
 
-# NodeManager unit (all nodes)
+# NodeManager unit (workers only)
 NM_UNIT="[Unit]
 Description=Hadoop YARN NodeManager
-After=network.target
+After=network-online.target
+Wants=network-online.target
+RequiresMountsFor=${DATA_MOUNT}
+ConditionPathIsMountPoint=${DATA_MOUNT}
 
 [Service]
-Type=forking
+Type=simple
 User=${HADOOP_USER}
 Group=${HADOOP_GROUP}
 ${DAEMON_ENV}
-ExecStart=${HADOOP_HOME}/bin/yarn --daemon start nodemanager
-ExecStop=${HADOOP_HOME}/bin/yarn --daemon stop nodemanager
+ExecStart=${HADOOP_HOME}/bin/yarn nodemanager
+TimeoutStopSec=120
+RestartSec=5
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 "
 
-write_unit "hadoop-hdfs-datanode.service" "$DN_UNIT"
-write_unit "hadoop-yarn-nodemanager.service" "$NM_UNIT"
-
-IS_MASTER="no"
-if [[ "$THIS_HOST" == "$MASTER_HOST" ]]; then
-  IS_MASTER="yes"
+if [[ "$IS_MASTER" == yes ]]; then
   write_unit "hadoop-hdfs-namenode.service" "$NN_UNIT"
   write_unit "hadoop-yarn-resourcemanager.service" "$RM_UNIT"
+else
+  write_unit "hadoop-hdfs-datanode.service" "$DN_UNIT"
+  write_unit "hadoop-yarn-nodemanager.service" "$NM_UNIT"
 fi
-
 cmd systemctl daemon-reload
 
-# Enable services
-cmd systemctl enable hadoop-hdfs-datanode.service
-cmd systemctl enable hadoop-yarn-nodemanager.service
-if [[ "$IS_MASTER" == "yes" ]]; then
-  cmd systemctl enable hadoop-hdfs-namenode.service
-  cmd systemctl enable hadoop-yarn-resourcemanager.service
-fi
-
-# Format HDFS only on master (and only if not already formatted)
-if [[ "$IS_MASTER" == "yes" ]]; then
-  if [[ ! -d "${HDFS_NAMENODE_DIR}/current" ]]; then
-    if ask_yn "Format HDFS NameNode now? (ONLY do this once)" "y"; then
-      cmd sudo -u "$HADOOP_USER" "${HADOOP_HOME}/bin/hdfs" namenode -format -force -nonInteractive
-    else
-      echo "Skipping format. You must format before starting NameNode the first time."
+# Fresh-node validation above rejects pre-existing data. Never force a format.
+if [[ "$IS_MASTER" == yes ]]; then
+  [[ ! -e "${HDFS_NAMENODE_DIR}/current" ]] || die "Existing NameNode metadata detected."
+  ask_yn "Initialize the new HDFS namespace on this fresh controller?" n || die "Initialization cancelled; services have not started."
+  cmd sudo -u "$HADOOP_USER" env "JAVA_HOME=$JAVA_HOME_PATH" "HADOOP_LOG_DIR=${DATA_BASE}/logs" "${HADOOP_HOME}/bin/hdfs" namenode -format -nonInteractive
+  cmd systemctl enable --now hadoop-hdfs-namenode.service hadoop-yarn-resourcemanager.service
+  cmd systemctl is-active hadoop-hdfs-namenode.service hadoop-yarn-resourcemanager.service
+  # An active process is not necessarily ready to accept HDFS requests.
+  ready=no
+  for attempt in {1..20}; do
+    if sudo -u "$HADOOP_USER" env "JAVA_HOME=$JAVA_HOME_PATH" timeout 5 "${HADOOP_HOME}/bin/hdfs" dfsadmin -report >/dev/null 2>&1; then
+      ready=yes
+      break
     fi
-  else
-    echo "NameNode appears already formatted (${HDFS_NAMENODE_DIR}/current exists)."
-  fi
-fi
-
-# Start services
-cmd systemctl restart hadoop-hdfs-datanode.service
-cmd systemctl restart hadoop-yarn-nodemanager.service
-
-if [[ "$IS_MASTER" == "yes" ]]; then
-  cmd systemctl restart hadoop-hdfs-namenode.service
-  cmd systemctl restart hadoop-yarn-resourcemanager.service
+    sleep 2
+  done
+  [[ "$ready" == yes ]] || die "NameNode did not become ready. Check its systemd journal."
+else
+  cmd systemctl enable --now hadoop-hdfs-datanode.service hadoop-yarn-nodemanager.service
+  sleep 5
+  cmd systemctl is-active hadoop-hdfs-datanode.service hadoop-yarn-nodemanager.service
 fi
 
 # Quick checks
@@ -496,23 +506,16 @@ echo
 echo "=== Quick checks ==="
 if [[ "$IS_MASTER" == "yes" ]]; then
   echo "JPS (master):"
-  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && jps" || true
+  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && jps"
 
   echo
   echo "Try HDFS report:"
-  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && hdfs dfsadmin -report" || true
+  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && hdfs dfsadmin -report"
 
-  if ask_yn "Run a tiny HDFS smoke test (mkdir/put/ls)?" "y"; then
-    cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && \
-      hdfs dfs -mkdir -p /tmp/poc && \
-      echo 'hello hadoop' >/tmp/hello.txt && \
-      hdfs dfs -put -f /tmp/hello.txt /tmp/poc/hello.txt && \
-      hdfs dfs -ls /tmp/poc && \
-      hdfs dfs -cat /tmp/poc/hello.txt"
-  fi
+  echo "After all three workers are installed, run scripts/verify-cluster.sh as the Hadoop service account."
 else
   echo "JPS (worker):"
-  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && jps" || true
+  cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && jps"
 fi
 
 echo
@@ -535,5 +538,5 @@ echo "Done."
 echo "If workers aren't showing up, verify:"
 echo "- DNS/hosts resolution between nodes"
 echo "- time sync (chronyd) is sane"
-echo "- ports allowed (or firewalld off for POC)"
+echo "- narrowly scoped Hadoop firewall rules between the four nodes"
 echo "- services: systemctl status hadoop-*"
