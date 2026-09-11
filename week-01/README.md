@@ -4,6 +4,9 @@ These notes summarize Sections 2.1 and 2.2 of *Mining of Massive Datasets*. The
 assigned reading stops before Section 2.3, where specific MapReduce algorithms
 begin.
 
+The [SSH access guide](docs/ssh-access.md) records the Week 1 login procedure.
+Continue to [Week 2](../week-02/README.md) for the cluster setup and word count.
+
 ## Why use a cluster?
 
 A cluster combines many independent, relatively ordinary computers. It provides

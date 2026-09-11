@@ -9,10 +9,9 @@ approved Week 2 wiki page is published.
 1. Read this file, then [STATUS.md](STATUS.md) and the
    [Apollo 11 dataset notes](datasets/apollo11.md).
 2. Check `git status --short --branch`. The Week 2 delivery branch is
-   `setup/cluster-readiness`, with implementation commit `2eec1c0` saved locally.
-   The branch push and pull request to `main` await explicit confirmation;
-   neither is complete. Preserve any later changes rather than assuming the
-   working tree is unchanged.
+   `setup/cluster-readiness`, targeting `main`. The student authorized pushing
+   the branch and opening a PR, which must remain unmerged for Matt's review.
+   Preserve any later changes rather than assuming the working tree is unchanged.
 3. Read [the short word-count walkthrough](apollo11-wordcount.md). Resume with
    explaining the mapper and reducer if the student requests a walkthrough.
    Do not repeat the completed run just to restore context.
@@ -70,7 +69,7 @@ the reading remains pending.
 **Our own program has been written, run through YARN, and independently checked.**
 
 - Python with Hadoop Streaming was explicitly selected for this exercise.
-- `scripts/wordcount/mapper.py` emits `(word, 1)`; `reducer.py` adds sorted
+- `week-02/scripts/wordcount/mapper.py` emits `(word, 1)`; `reducer.py` adds sorted
   counts. `run-hadoop.sh` submits them with one reducer and a new output path.
 - Word rules: lowercase English letters, internal apostrophes retained, curly
   apostrophes normalized, numbers and other punctuation act as separators.
@@ -82,7 +81,7 @@ the reading remains pending.
   Local counts, program hashes, and verification summary are under
   `data/apollo11/results/20260911T203041Z-81724750/` (ignored).
 - Five new word-count tests and all 15 previous tests pass. Bash syntax and
-  whitespace checks pass. Full run notes are in `docs/apollo11-wordcount.md`.
+  whitespace checks pass. Full run notes are in `week-02/docs/apollo11-wordcount.md`.
 
 The next learning step is reading the walkthrough and MMDS Section 2.3.
 Do not assume the student's understanding or reading is complete merely because
@@ -92,10 +91,14 @@ The dataset is suitable for learning, not sustained-load benchmarking. Larger
 stress tests and SQL-style join exercises remain later work. The approved
 [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-2:-Examples-of-MapReduce-Algorithms)
 was published in wiki commit `b29e7ab`. Its repository copy is
-[week-02-hadoop-and-wordcount.md](week-02-hadoop-and-wordcount.md).
-The local Week 2 repository wrap-up is complete. Branch publication and a pull
-request still require explicit confirmation. This handoff does not authorize
-publication of unrelated future work.
+[the Week 2 overview](../README.md).
+The student authorized branch publication and a pull request, and explicitly
+reserved review and acceptance for Matt. Do not merge the PR or enable automatic
+merging. This handoff does not authorize publication of unrelated future work.
+
+Coursework is organized under `week-01/` and `week-02/`. All Week 2 code,
+tests, and documents are under `week-02/`; ignored datasets and private helpers
+remain in root-level `data/` and `.local/`. Commands below use the repository root.
 
 ## Access and boundaries
 
@@ -115,7 +118,7 @@ publication of unrelated future work.
   Host keys are pinned; unexpected key changes still require investigation.
 - Worker 2's direct SSH connection resets remain undiagnosed; its existing
   jump route works. There is no need to fix that to continue this exercise.
-- Do not rerun `hadoop-poc-rhel9.sh`, format disks or the NameNode, or change
+- Do not rerun `week-02/hadoop-poc-rhel9.sh`, format disks or the NameNode, or change
   network policy to resume word count. These nodes already contain data.
 - Stay within the personal Big Data project. Employer files, their aliases,
   and employer agents or material are excluded from direct and indirect
@@ -127,15 +130,15 @@ publication of unrelated future work.
 
 ## Files and validation to preserve
 
-Week 2 delivery includes `README.md`, `hadoop-poc-rhel9.sh`, `.gitignore`, the
-status/setup/dataset documentation, `scripts/`, and `tests/`. Preserve these
+Week 2 delivery includes `week-02/README.md`, `week-02/hadoop-poc-rhel9.sh`, `.gitignore`, the
+status/setup/dataset documentation, `week-02/scripts/`, and `week-02/tests/`. Preserve these
 artifacts and any subsequent changes when resuming.
 
-- `scripts/fetch_apollo11.py`: standard-library downloader and HTML extraction.
-- `scripts/verify-cluster.sh`: previously successful bundled-example test.
-- `scripts/configure-cluster-firewall.sh`: previously approved rules.
-- `tests/test_installer_guards.py`: 11 guard tests previously passed.
-- `tests/test_apollo11_text.py`: four extraction/encoding tests passed.
+- `week-02/scripts/fetch_apollo11.py`: standard-library downloader and HTML extraction.
+- `week-02/scripts/verify-cluster.sh`: previously successful bundled-example test.
+- `week-02/scripts/configure-cluster-firewall.sh`: previously approved rules.
+- `week-02/tests/test_installer_guards.py`: 11 guard tests previously passed.
+- `week-02/tests/test_apollo11_text.py`: four extraction/encoding tests passed.
 - `.local/upload-apollo11.py` and `.local/apollo11-upload.log`: ignored upload
   procedure and exact verification evidence. Inspect only if needed.
 

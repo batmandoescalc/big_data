@@ -9,6 +9,16 @@
 
 The practical work this week connected Week 1's distributed-storage and MapReduce concepts to a working cluster and a real text dataset.
 
+## Week 2 files
+
+- [Program walkthrough](docs/apollo11-wordcount.md): start here to understand what we built.
+- [Word-count code](scripts/wordcount/): our mapper, reducer, and Hadoop launcher.
+- [Dataset notes](docs/datasets/apollo11.md) and [downloader](scripts/fetch_apollo11.py).
+- [Cluster setup](docs/cluster-setup.md), [installer](hadoop-poc-rhel9.sh), and [verification script](scripts/verify-cluster.sh).
+- [Tests](tests/), [current status](docs/STATUS.md), and [handoff](docs/HANDOFF.md).
+
+Run commands in the supporting docs from the repository root unless they specify a controller session.
+
 ## Environment progress
 
 Hadoop 3.4.3 and Java 11 were installed on the four RHEL 9 virtual machines. The controller runs the HDFS NameNode and YARN ResourceManager. Each of the three workers runs a DataNode and NodeManager.

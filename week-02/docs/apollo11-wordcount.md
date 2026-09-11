@@ -44,10 +44,10 @@ From the repository root, in Bash:
 ```bash
 set -o pipefail
 printf 'Houston Houston Eagle\n' \
-  | python3 scripts/wordcount/mapper.py \
+  | python3 week-02/scripts/wordcount/mapper.py \
   | LC_ALL=C sort \
-  | python3 scripts/wordcount/reducer.py
-python3 -m unittest discover -s tests -p 'test_wordcount.py' -v
+  | python3 week-02/scripts/wordcount/reducer.py
+python3 -m unittest discover -s week-02/tests -p 'test_wordcount.py' -v
 ```
 
 Expected output is `eagle: 1` and `houston: 2`, separated by tabs in the file.
@@ -56,7 +56,7 @@ not use the cluster.
 
 ## Run on Hadoop
 
-Copy the three files in `scripts/wordcount/` into one directory on the
+Copy the three files in `week-02/scripts/wordcount/` into one directory on the
 controller, then run as the `hadoop` service account:
 
 ```bash

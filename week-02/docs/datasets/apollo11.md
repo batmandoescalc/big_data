@@ -29,7 +29,7 @@ stress test.
 From the repository root:
 
 ```bash
-python3 scripts/fetch_apollo11.py
+python3 week-02/scripts/fetch_apollo11.py
 ```
 
 The script downloads just these three pages and saves a snapshot under

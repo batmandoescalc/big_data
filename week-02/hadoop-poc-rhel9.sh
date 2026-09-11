@@ -12,7 +12,7 @@
 # - Performs a quick smoke test and prints useful URLs/commands
 #
 # Run on EACH node as root:
-#   sudo bash hadoop-poc-rhel9.sh
+#   sudo bash week-02/hadoop-poc-rhel9.sh
 #
 # Assumptions:
 # - Supply the real, resolvable controller and worker names at the prompts
@@ -512,7 +512,7 @@ if [[ "$IS_MASTER" == "yes" ]]; then
   echo "Try HDFS report:"
   cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && hdfs dfsadmin -report"
 
-  echo "After all three workers are installed, run scripts/verify-cluster.sh as the Hadoop service account."
+  echo "After all three workers are installed, run week-02/scripts/verify-cluster.sh as the Hadoop service account."
 else
   echo "JPS (worker):"
   cmd sudo -u "$HADOOP_USER" bash -lc "source /etc/profile.d/hadoop.sh && jps"

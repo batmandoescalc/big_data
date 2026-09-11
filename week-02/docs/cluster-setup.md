@@ -35,7 +35,7 @@ Do not open an unauthenticated teaching cluster to arbitrary clients.
 
 ### Approved firewall configuration
 
-`scripts/configure-cluster-firewall.sh` adds the following TCP allow rules to
+`week-02/scripts/configure-cluster-firewall.sh` adds the following TCP allow rules to
 the existing active `public` zone, both at runtime and persistently. Each rule
 is restricted to one of the other three verified VM IPv4 addresses (`/32`);
 no rule permits arbitrary university or Internet clients.
@@ -60,7 +60,7 @@ and three workers. It checks the official download's SHA-512 checksum, requires
 at least four CPUs and 7 GiB RAM per node, and budgets worker YARN tasks for
 4 GiB RAM and two virtual cores. Validate those choices against every VM.
 
-First run `sudo bash hadoop-poc-rhel9.sh --check` on all four prepared nodes.
+First run `sudo bash week-02/hadoop-poc-rhel9.sh --check` on all four prepared nodes.
 Supply their actual resolvable names. This validates local prerequisites only;
 it does not prove cluster connectivity or repository availability. Check the
 results before installing. The installer fails on unexpected EOF rather than
@@ -79,7 +79,7 @@ blindly to bypass the checks.
 
 ## 4. Acceptance
 
-On the controller, run `scripts/verify-cluster.sh` as the Hadoop service account
+On the controller, run `week-02/scripts/verify-cluster.sh` as the Hadoop service account
 after all workers are installed. It requires:
 
 - Three live HDFS DataNodes and three running YARN NodeManagers.
@@ -112,10 +112,10 @@ are retained there. `exit` leaves the service-account shell.
 ## Local validation
 
 ```bash
-bash -n hadoop-poc-rhel9.sh
-bash -n scripts/verify-cluster.sh
-bash -n scripts/configure-cluster-firewall.sh
-python3 -m unittest discover -s tests -v
+bash -n week-02/hadoop-poc-rhel9.sh
+bash -n week-02/scripts/verify-cluster.sh
+bash -n week-02/scripts/configure-cluster-firewall.sh
+python3 -m unittest discover -s week-02/tests -v
 git diff --check
 ```
 

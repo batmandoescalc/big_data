@@ -7,21 +7,14 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-The Week 1 foundations phase covered reading and environment access:
-
-- Review Sections 2.1 and 2.2 of *Mining of Massive Datasets*.
-- Verify SSH access to the controller and three worker virtual machines.
-- Understand the supplied proof-of-concept provisioning script.
-- Document repeatable setup and safety checks before changing the servers.
-
 Week 2 covers Section 2.3 and a word-count exercise. The Hadoop cluster is
 installed and its initial acceptance test passed. NASA's Apollo 11 transcripts
-are our first real text dataset; see the [dataset notes](docs/datasets/apollo11.md).
+are our first real text dataset; see the [dataset notes](week-02/docs/datasets/apollo11.md).
 Our Python mapper and reducer have now run successfully on those transcripts
 through Hadoop Streaming. All 8,184 word totals match an independent local
-counter. See the [short walkthrough and results](docs/apollo11-wordcount.md).
-The [Week 2 write-up](docs/week-02-hadoop-and-wordcount.md) summarizes the work
-and is also published on the repository wiki. The walkthrough and MMDS
+counter. See the [short walkthrough and results](week-02/docs/apollo11-wordcount.md).
+The [Week 2 write-up](week-02/README.md) summarizes the work and is also
+published on the repository wiki. The walkthrough and MMDS
 Section 2.3 reading remain the student's next steps.
 
 ## Intended architecture
@@ -36,24 +29,29 @@ Section 2.3 reading remain the student's next steps.
 The installer now keeps controller and worker services separate. Software is
 installed on all four VMs, and the distributed storage and MapReduce acceptance
 test passed.
-See `docs/STATUS.md`.
+See [the current status](week-02/docs/STATUS.md).
 
-## Repository contents
+## Coursework by week
 
-- `hadoop-poc-rhel9.sh`: interactive proof-of-concept Hadoop installer.
-- `docs/ssh-access.md`: safe, generic SSH-access procedure.
-- `docs/week-01-foundations.md`: notes on distributed file systems and
-  MapReduce.
-- `docs/cluster-setup.md`: preparation, installation, and acceptance procedure.
-- `scripts/verify-cluster.sh`: checks all workers and runs a MapReduce word count.
-- `scripts/fetch_apollo11.py`: downloads three NASA transcripts and extracts text.
-- `docs/datasets/apollo11.md`: dataset sources, preparation, and HDFS input location.
-- `scripts/wordcount/`: our Python mapper, reducer, and Hadoop job launcher.
-- `docs/apollo11-wordcount.md`: word rules, worked example, and verified results.
+- [Week 1](week-01/README.md): distributed-system foundations and
+  [SSH access](week-01/docs/ssh-access.md).
+- [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
+  word-count program, tests, and supporting documentation.
+
+Each week's overview is its `README.md`; supporting material lives under that
+week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
+and `.local/` directories remain at the repository root for local datasets and
+private access configuration.
+
+Run this week's tests from the repository root:
+
+```bash
+python3 -m unittest discover -s week-02/tests -v
+```
 
 ## Provisioning safety
 
-Run `hadoop-poc-rhel9.sh --check` to validate settings without installation.
+Run `sudo bash week-02/hadoop-poc-rhel9.sh --check` to validate settings without installation.
 The installer is for fresh nodes only. Before installing, establish:
 
 - The actual controller and worker hostnames.

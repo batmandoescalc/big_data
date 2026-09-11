@@ -78,7 +78,7 @@ the program walkthrough and textbook next. That reading remains pending.
 
 After logging into the controller, use `sudo -u hadoop bash -l` for the current
 service-account workflow, then `hdfs dfs -ls /tmp/poc` or `yarn node -list`.
-See `docs/cluster-setup.md` for the prepared tools and configuration.
+See `week-02/docs/cluster-setup.md` for the prepared tools and configuration.
 
 The tests establish basic distributed storage and job execution. They do not
 establish sustained-load performance, failure recovery, or high availability.
@@ -111,12 +111,16 @@ files and program checksums remain under the ignored dataset results directory.
 
 The approved [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-2:-Examples-of-MapReduce-Algorithms)
 is published in wiki commit `b29e7ab`. A matching repository copy is in
-[week-02-hadoop-and-wordcount.md](week-02-hadoop-and-wordcount.md).
+[the Week 2 overview](../README.md).
 The code and documentation use branch `setup/cluster-readiness`, targeting
-`main` through a pull request for review. Implementation commit `2eec1c0` is
-saved locally. Pushing the branch and opening that pull request are still
-pending explicit confirmation; no repository push or PR has been completed.
-Datasets and private access files remain ignored by Git.
+`main` through a pull request for Matt's review and acceptance. The student
+authorized pushing the branch and opening the PR, and instructed that it must
+remain unmerged. Do not enable automatic merging.
+
+Coursework is organized into `week-01/` and `week-02/`. All Week 2 code, tests,
+and documents are in `week-02/`. Datasets and private access files remain
+ignored at the repository root. The repository copy of the wiki write-up adds
+links to the Week 2 files for navigation.
 
 The technical assignment and wiki write-up are complete. The remaining student
 work is to read [the program walkthrough](apollo11-wordcount.md) and MMDS
