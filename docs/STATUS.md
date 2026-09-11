@@ -113,8 +113,10 @@ The approved [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/
 is published in wiki commit `b29e7ab`. A matching repository copy is in
 [week-02-hadoop-and-wordcount.md](week-02-hadoop-and-wordcount.md).
 The code and documentation use branch `setup/cluster-readiness`, targeting
-`main` through a pull request for review. Datasets and private access files
-remain ignored by Git.
+`main` through a pull request for review. Implementation commit `2eec1c0` is
+saved locally. Pushing the branch and opening that pull request are still
+pending explicit confirmation; no repository push or PR has been completed.
+Datasets and private access files remain ignored by Git.
 
 The technical assignment and wiki write-up are complete. The remaining student
 work is to read [the program walkthrough](apollo11-wordcount.md) and MMDS

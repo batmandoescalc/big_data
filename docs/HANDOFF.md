@@ -9,8 +9,10 @@ approved Week 2 wiki page is published.
 1. Read this file, then [STATUS.md](STATUS.md) and the
    [Apollo 11 dataset notes](datasets/apollo11.md).
 2. Check `git status --short --branch`. The Week 2 delivery branch is
-   `setup/cluster-readiness`, targeting `main` through a pull request. Preserve
-   any later changes rather than assuming the working tree is unchanged.
+   `setup/cluster-readiness`, with implementation commit `2eec1c0` saved locally.
+   The branch push and pull request to `main` await explicit confirmation;
+   neither is complete. Preserve any later changes rather than assuming the
+   working tree is unchanged.
 3. Read [the short word-count walkthrough](apollo11-wordcount.md). Resume with
    explaining the mapper and reducer if the student requests a walkthrough.
    Do not repeat the completed run just to restore context.
@@ -91,7 +93,8 @@ stress tests and SQL-style join exercises remain later work. The approved
 [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-2:-Examples-of-MapReduce-Algorithms)
 was published in wiki commit `b29e7ab`. Its repository copy is
 [week-02-hadoop-and-wordcount.md](week-02-hadoop-and-wordcount.md).
-Week 2 repository wrap-up was also authorized. This handoff does not authorize
+The local Week 2 repository wrap-up is complete. Branch publication and a pull
+request still require explicit confirmation. This handoff does not authorize
 publication of unrelated future work.
 
 ## Access and boundaries
