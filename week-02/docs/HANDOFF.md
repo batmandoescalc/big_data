@@ -9,8 +9,9 @@ approved Week 2 wiki page is published.
 1. Read this file, then [STATUS.md](STATUS.md) and the
    [Apollo 11 dataset notes](datasets/apollo11.md).
 2. Check `git status --short --branch`. The Week 2 delivery branch is
-   `setup/cluster-readiness`, targeting `main`. The student authorized pushing
-   the branch and opening a PR, which must remain unmerged for Matt's review.
+   `setup/cluster-readiness`, published in [PR #3](https://github.com/batmandoescalc/big_data/pull/3)
+   against `main`. Matt (`batmandoescalc`) has been requested as reviewer.
+   The PR remains open and unmerged, with automatic merging disabled.
    Preserve any later changes rather than assuming the working tree is unchanged.
 3. Read [the short word-count walkthrough](apollo11-wordcount.md). Resume with
    explaining the mapper and reducer if the student requests a walkthrough.

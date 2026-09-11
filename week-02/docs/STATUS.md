@@ -112,10 +112,10 @@ files and program checksums remain under the ignored dataset results directory.
 The approved [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-2:-Examples-of-MapReduce-Algorithms)
 is published in wiki commit `b29e7ab`. A matching repository copy is in
 [the Week 2 overview](../README.md).
-The code and documentation use branch `setup/cluster-readiness`, targeting
-`main` through a pull request for Matt's review and acceptance. The student
-authorized pushing the branch and opening the PR, and instructed that it must
-remain unmerged. Do not enable automatic merging.
+The code and documentation are pushed on branch `setup/cluster-readiness` in
+[PR #3](https://github.com/batmandoescalc/big_data/pull/3), targeting `main`.
+Matt (`batmandoescalc`) has been requested as reviewer. The PR is open and
+unmerged, awaiting his review and acceptance. Do not enable automatic merging.
 
 Coursework is organized into `week-01/` and `week-02/`. All Week 2 code, tests,
 and documents are in `week-02/`. Datasets and private access files remain
