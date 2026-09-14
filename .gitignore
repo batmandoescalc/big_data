@@ -1,0 +1,6 @@
+# Local references, access configuration, and scratch files.
+tmp/
+.local/
+data/
+__pycache__/
+*.py[cod]

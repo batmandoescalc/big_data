@@ -7,15 +7,15 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 1 is limited to foundations and environment access:
-
-- Review Sections 2.1 and 2.2 of *Mining of Massive Datasets*.
-- Verify SSH access to the controller and three worker virtual machines.
-- Understand the supplied proof-of-concept provisioning script.
-- Document repeatable setup and safety checks before changing the servers.
-
-Algorithm implementations beginning in Section 2.3 are outside the current
-phase.
+Week 2 covers Section 2.3 and a word-count exercise. The Hadoop cluster is
+installed and its initial acceptance test passed. NASA's Apollo 11 transcripts
+are our first real text dataset; see the [dataset notes](week-02/docs/datasets/apollo11.md).
+Our Python mapper and reducer have now run successfully on those transcripts
+through Hadoop Streaming. All 8,184 word totals match an independent local
+counter. See the [short walkthrough and results](week-02/docs/apollo11-wordcount.md).
+The [Week 2 write-up](week-02/README.md) summarizes the work and is also
+published on the repository wiki. The walkthrough and MMDS
+Section 2.3 reading remain the student's next steps.
 
 ## Intended architecture
 
@@ -26,30 +26,46 @@ phase.
 | Worker 2    | HDFS DataNode and YARN NodeManager      |
 | Worker 3    | HDFS DataNode and YARN NodeManager      |
 
-The final roles must be confirmed against the actual server configuration before
-provisioning. The supplied script currently enables worker services on every
-node, including the controller.
+The installer now keeps controller and worker services separate. Software is
+installed on all four VMs, and the distributed storage and MapReduce acceptance
+test passed.
+See [the current status](week-02/docs/STATUS.md).
 
-## Repository contents
+## Coursework by week
 
-- `hadoop-poc-rhel9.sh`: interactive proof-of-concept Hadoop installer.
-- `docs/ssh-access.md`: safe, generic SSH-access procedure.
-- `docs/week-01-foundations.md`: notes on distributed file systems and
-  MapReduce.
+- [Week 1](week-01/README.md): distributed-system foundations and
+  [SSH access](week-01/docs/ssh-access.md).
+- [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
+  word-count program, tests, and supporting documentation.
+
+Each week's overview is its `README.md`; supporting material lives under that
+week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
+and `.local/` directories remain at the repository root for local datasets and
+private access configuration.
+
+Run this week's tests from the repository root:
+
+```bash
+python3 -m unittest discover -s week-02/tests -v
+```
 
 ## Provisioning safety
 
-Do not run `hadoop-poc-rhel9.sh` until the team has confirmed:
+Run `sudo bash week-02/hadoop-poc-rhel9.sh --check` to validate settings without installation.
+The installer is for fresh nodes only. Before installing, establish:
 
 - The actual controller and worker hostnames.
 - Student `sudo` permissions.
 - The filesystem and mount point intended for the separate data disk.
 - Whether Hadoop or HDFS data already exists.
-- Whether the controller should also run worker services.
-- Which firewall and SELinux changes, if any, are authorized.
+- The planned dedicated controller and three worker roles.
+- The narrow firewall rules needed between the four nodes.
 
-Formatting a NameNode can destroy existing HDFS metadata. Disabling a firewall
-or weakening SELinux should not be treated as a routine setup step.
+The installer requires a separately mounted data filesystem, rejects existing
+Hadoop data and installations, and does not force NameNode formatting. It does
+not disable the firewall, change SELinux, or configure SSH trust. A partially
+completed installation requires inspection before continuing; rerunning this
+fresh-node installer is not an upgrade or recovery procedure.
 
 ## Weekly workflow
 
