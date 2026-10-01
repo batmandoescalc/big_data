@@ -25,8 +25,15 @@ For a fresh chat, start with [HANDOFF.md](HANDOFF.md).
 
 ## Open
 
-- PR into `dev` awaits Matt's review. Do not merge or enable auto-merge.
-- The wiki page "Week-4:-Finding-Similar-Items" is drafted locally in
-  `.local/wiki/` and awaits the student's approval before pushing.
-- The student's reading of MMDS Chapter 3 and the walkthrough is their own
-  next step; do not assume it is complete.
+- PR #5 into `dev` awaits Matt's review. Do not merge or enable auto-merge.
+- The wiki page [Week 4: Finding Similar Items](https://github.com/batmandoescalc/big_data/wiki/Week-4:-Finding-Similar-Items)
+  is published.
+- **Student learning still to do (planned for October 2, 2026).** The student
+  needs to learn this week's work at a lower level, meaning what happens under
+  the hood, well enough to explain it back and walk through the work: how
+  shingles become hashed sets, why a minhash row matches with probability
+  equal to Jaccard, how banding produces the S-curve, how the inverted index
+  gives exact ground truth, and what each Hadoop job's map, shuffle, and
+  reduce steps do. Start from [the walkthrough](minhash-lsh-walkthrough.md),
+  then go through the code. Do not treat this as done until the student can
+  explain it.
