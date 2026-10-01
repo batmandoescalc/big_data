@@ -7,15 +7,12 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 2 covers Section 2.3 and a word-count exercise. The Hadoop cluster is
-installed and its initial acceptance test passed. NASA's Apollo 11 transcripts
-are our first real text dataset; see the [dataset notes](week-02/docs/datasets/apollo11.md).
-Our Python mapper and reducer have now run successfully on those transcripts
-through Hadoop Streaming. All 8,184 word totals match an independent local
-counter. See the [short walkthrough and results](week-02/docs/apollo11-wordcount.md).
-The [Week 2 write-up](week-02/README.md) summarizes the work and is also
-published on the repository wiki. The walkthrough and MMDS
-Section 2.3 reading remain the student's next steps.
+The Hadoop cluster is installed and its initial acceptance test passed. Week 2
+loaded NASA's Apollo 11 transcripts and ran a verified Python word-count job.
+Week 3 converts the air-to-ground transcript into relations and performs a
+natural join followed by grouping and aggregation in both SQLite and Hadoop.
+All 8,420 joined rows and all four aggregate rows match exactly. See the
+[Week 3 write-up and results](week-03/README.md).
 
 ## Intended architecture
 
@@ -37,6 +34,8 @@ See [the current status](week-02/docs/STATUS.md).
   [SSH access](week-01/docs/ssh-access.md).
 - [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
   word-count program, tests, and supporting documentation.
+- [Week 3](week-03/README.md): relational data preparation, natural join,
+  grouping and aggregation, SQL comparison, runtime evidence, and Spark research.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
@@ -46,7 +45,7 @@ private access configuration.
 Run this week's tests from the repository root:
 
 ```bash
-python3 -m unittest discover -s week-02/tests -v
+python3 -m unittest discover -s week-03/tests -v
 ```
 
 ## Provisioning safety
