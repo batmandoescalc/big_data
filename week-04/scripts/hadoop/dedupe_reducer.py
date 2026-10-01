@@ -10,7 +10,8 @@ import sys
 def main():
     current, count = None, 0
     for line in sys.stdin:
-        pair = line.rstrip("\n")
+        # With a two-field key, Streaming appends a tab and an empty value.
+        pair = "\t".join(line.rstrip("\n").split("\t")[:2])
         if pair != current:
             if current is not None:
                 print(f"{current}\t{count}")

@@ -39,6 +39,9 @@ timed() {
 }
 
 total_start=$(date +%s%N)
+# -files symlinks each script into the task directory from a separate cache
+# directory. Python resolves the symlink, so it would not find lsh.py next to
+# the mapper; PYTHONPATH=. makes the task directory importable.
 timed lsh-banding-job hadoop jar "${jars[0]}" \
   -D mapreduce.framework.name=yarn \
   -D mapreduce.job.name=apollo11-lsh-banding \
@@ -48,7 +51,8 @@ timed lsh-banding-job hadoop jar "${jars[0]}" \
   -output "$buckets" \
   -mapper "python3 lsh_mapper.py $bands $rows" \
   -reducer 'python3 lsh_reducer.py' \
-  -cmdenv PYTHONIOENCODING=utf-8
+  -cmdenv PYTHONIOENCODING=utf-8 \
+  -cmdenv PYTHONPATH=.
 hdfs dfs -test -e "$buckets/_SUCCESS"
 
 # Pairs found in several bands, or by several reducers, collapse here. The key

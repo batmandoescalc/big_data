@@ -1,9 +1,11 @@
 """Shingling, minhash, LSH banding, and the Hadoop reducers on known inputs."""
 
 from pathlib import Path
+import os
 import random
 import subprocess
 import sys
+import tempfile
 import unittest
 
 
@@ -152,6 +154,30 @@ class HadoopTests(unittest.TestCase):
     def test_dedupe_counts_bands_that_agreed(self):
         out = run(HADOOP / "dedupe_reducer.py", "A\tB\nA\tB\nA\tC\n")
         self.assertEqual(out, "A\tB\t2\nA\tC\t1\n")
+
+    def test_dedupe_ignores_empty_value_from_two_field_key(self):
+        # Hadoop delivers 'key<TAB>value'; here the key is both IDs and the value is empty.
+        out = run(HADOOP / "dedupe_reducer.py", "A\tB\t\nA\tB\t\n")
+        self.assertEqual(out, "A\tB\t2\n")
+
+    def test_mapper_imports_lsh_from_streaming_symlink_layout(self):
+        # Hadoop Streaming symlinks each -files entry into the task directory from
+        # its own cache directory. The first cluster run failed on this layout.
+        launcher = (HADOOP / "run-hadoop.sh").read_text()
+        self.assertIn("-cmdenv PYTHONPATH=.", launcher)
+        with tempfile.TemporaryDirectory() as tmp:
+            task = Path(tmp, "task")
+            task.mkdir()
+            for source in (SCRIPTS / "lsh.py", HADOOP / "lsh_mapper.py"):
+                cache = Path(tmp, "cache-" + source.stem)
+                cache.mkdir()
+                (cache / source.name).write_bytes(source.read_bytes())
+                os.symlink(cache / source.name, task / source.name)
+            result = subprocess.run(
+                [sys.executable, "lsh_mapper.py", "2", "2"], input="x\t1 2 3 4\n", text=True,
+                capture_output=True, cwd=task, env={"PYTHONPATH": "."})
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(len(result.stdout.splitlines()), 2)
 
     def test_empty_input(self):
         self.assertEqual(run(HADOOP / "lsh_reducer.py", ""), "")
