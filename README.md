@@ -7,15 +7,14 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 2 covers Section 2.3 and a word-count exercise. The Hadoop cluster is
-installed and its initial acceptance test passed. NASA's Apollo 11 transcripts
-are our first real text dataset; see the [dataset notes](week-02/docs/datasets/apollo11.md).
-Our Python mapper and reducer have now run successfully on those transcripts
-through Hadoop Streaming. All 8,184 word totals match an independent local
-counter. See the [short walkthrough and results](week-02/docs/apollo11-wordcount.md).
-The [Week 2 write-up](week-02/README.md) summarizes the work and is also
-published on the repository wiki. The walkthrough and MMDS
-Section 2.3 reading remain the student's next steps.
+Week 4 covers MMDS Chapter 3, "Finding Similar Items." We wrote shingling,
+minhash, and locality-sensitive hashing (LSH) scripts and used them to find
+replayed passages across the three Apollo 11 transcripts. Exact Jaccard
+similarity for every pair that shares a shingle serves as ground truth. The
+chosen LSH setting finds 93% of cross-file near-duplicates. The Hadoop
+Streaming version of the LSH step produced exactly the same 8,842 candidate
+pairs as the local code. See the [Week 4 write-up](week-04/README.md) and the
+[hand-worked walkthrough](week-04/docs/minhash-lsh-walkthrough.md).
 
 ## Intended architecture
 
@@ -37,16 +36,21 @@ See [the current status](week-02/docs/STATUS.md).
   [SSH access](week-01/docs/ssh-access.md).
 - [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
   word-count program, tests, and supporting documentation.
+- Week 3: relational operations in SQL and Hadoop, on Noah's branch and the
+  [wiki](https://github.com/batmandoescalc/big_data/wiki/Week-3:-Relational-Operations-in-SQL-and-Hadoop).
+- [Week 4](week-04/README.md): shingling, minhash, LSH, and finding replayed
+  passages in the Apollo 11 transcripts, locally and on Hadoop.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
 and `.local/` directories remain at the repository root for local datasets and
 private access configuration.
 
-Run this week's tests from the repository root:
+Run the tests from the repository root:
 
 ```bash
 python3 -m unittest discover -s week-02/tests -v
+python3 -m unittest discover -s week-04/tests -v
 ```
 
 ## Provisioning safety
