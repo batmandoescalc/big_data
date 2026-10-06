@@ -52,9 +52,16 @@ Apollo local validation matched exactly:
 | recovery | 11 | 66 |
 | remote-site | 35 | 233 |
 
-The Wikipedia timing matrix is pending because the cluster is unreachable
-from the current network. No placeholder timing values are being presented as
-measurements.
+The live one-job Hadoop run took 46.586 seconds and matched SQLite exactly;
+the generic SQLite calculation took 0.106 seconds. The historical two-job
+Hadoop pipeline took 95.341 seconds. The new job used two mappers, one reducer,
+and a combiner that reduced 8,420 mapped rows to seven reducer input records.
+The lower time is consistent with removing one YARN submission and the HDFS
+intermediate, but the runs occurred at different times and are not a controlled
+universal speedup claim.
+
+The Wikipedia timing matrix is in progress. No placeholder timing values are
+being presented as measurements.
 
 ## Why small Hadoop was slow
 

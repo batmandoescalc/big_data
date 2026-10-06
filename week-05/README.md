@@ -7,11 +7,11 @@ asks why SQLite completed the Apollo query in a fraction of a second while the
 original two-job Hadoop pipeline took about 95 seconds, whether that gap changes
 as input grows, and whether Spark is likely to help.
 
-The implementation and local validation are complete. The live Wikipedia
-timing matrix is not yet complete because the cluster is unreachable from the
-current network. No timing values have been invented. The large download,
-HDFS uploads, and cluster runs should begin only after the read-only preflight
-passes on an approved university network.
+The implementation, local validation, and live one-job Apollo validation are
+complete. The Wikipedia timing matrix is in progress on the cluster. No timing
+values are published before their preserved run records exist. The read-only
+preflight passed with three HDFS workers, three YARN workers, healthy HDFS,
+replication two, and sufficient capacity.
 
 ## What changed from Week 3
 
@@ -60,7 +60,8 @@ unmatched records using `CDF`, `CMP/LMP`, `PRESIDENT`, or `SWIM`.
 
 The local map-side pipeline processed the 8,420 matched records in 0.243
 seconds. This is a development-machine validation time, not a Hadoop result.
-Its output matched SQLite byte-for-byte after canonical sorting:
+The live cluster then executed the one-job design through YARN. Its output
+matched SQLite byte-for-byte after canonical sorting:
 
 | Category | Records | Words | Text bytes |
 | --- | ---: | ---: | ---: |
@@ -70,7 +71,20 @@ Its output matched SQLite byte-for-byte after canonical sorting:
 | remote-site | 35 | 233 | 1,350 |
 
 This reproduces the four Week 3 count/word totals while removing the reducer
-buffer and one distributed job. A live Hadoop validation remains required.
+buffer and one distributed job.
+
+| Apollo operation | Wall-clock time |
+| --- | ---: |
+| SQLite generic query | 0.105507 seconds |
+| One-job map-side Hadoop query | 46.585714 seconds |
+| Historical two-job Week 3 Hadoop pipeline | 95.340955 seconds |
+
+The new live job used two mappers, one reducer, and a combiner. Its 8,420 map
+outputs were combined into only seven reducer input records across four groups.
+The observed wall time is about 51% lower than the earlier two-job run, which
+is consistent with removing a YARN submission and intermediate HDFS I/O.
+Because these runs occurred at different times, the difference is useful
+evidence for the redesign but not a controlled universal speedup claim.
 
 ## Wikipedia data and provenance
 
@@ -145,9 +159,9 @@ designed to separate that startup floor from throughput at larger sizes.
 
 ### Runtime results
 
-No Wikipedia timing table is published yet. The live cluster preflight timed
-out from the current network on October 6, 2026. Results will be inserted only
-from preserved JSON manifests after the required runs succeed.
+No Wikipedia timing table is published yet. The live cluster preflight passed
+on October 6, 2026, and the pinned dump pipeline is running. Results will be
+inserted only from preserved JSON manifests after the required runs succeed.
 
 ## Cluster safety and reproduction
 

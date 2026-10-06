@@ -9,6 +9,8 @@ Updated October 6, 2026.
 - Replaced the new-work buffered reduce-side join with a generic map-side
   replicated join and one aggregation job.
 - Reproduced all four Apollo totals exactly with 8,420 matched records.
+- Ran the optimized join on YARN: 46.585714 seconds, exact SQLite match, two
+  mappers, one reducer, and seven combined records entering the reducer.
 - Added strict unknown-key behavior and explicit reporting for Apollo's 10
   unmatched records.
 - Added verified Wikimedia source selection, streaming XML/bzip2 preparation,
@@ -17,9 +19,8 @@ Updated October 6, 2026.
 - Expanded the Week 3 human interpretation and runtime explanation.
 - Week 3 and Week 5 local test suites pass.
 
-## Blocked on network access
+## In progress
 
-- Live one-job Apollo Hadoop validation.
 - Download/prepare the pinned 25.05 GiB compressed Wikipedia dump.
 - Run three SQLite/Hadoop attempts at 2 MiB, 128 MiB, 1 GiB, and 10 GiB.
 - Run Hadoop near 100 GiB and SQLite there only if disk preflight permits.
@@ -27,5 +28,6 @@ Updated October 6, 2026.
 - Publish the Wiki update, GitHub review replies, issue progress comment, and
   final unmerged PR after evidence is present.
 
-The most recent read-only SSH health check timed out. Continue only from an
-approved university network; do not change provisioning or cluster settings.
+The October 6 preflight passed on the approved university network with three
+HDFS/YARN workers, healthy HDFS, replication two, and capacity headroom. Do not
+change provisioning or cluster settings.
