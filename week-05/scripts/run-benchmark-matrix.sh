@@ -23,7 +23,7 @@ repo_root="$(cd -- "$week_dir/.." && pwd)"
 [[ ! -e "$runtime_root" ]] || { echo "Immutable runtime root already exists: $runtime_root" >&2; exit 1; }
 mkdir -p "$runtime_root"
 
-"$script_dir/preflight-cluster.sh"
+bash "$script_dir/preflight-cluster.sh"
 
 mapfile -t samples < <(printf '%s\n' "$local_root"/sample-* | sort -V)
 for sample in "${samples[@]}"; do
