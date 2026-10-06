@@ -222,6 +222,24 @@ class RelationalPipelineTests(unittest.TestCase):
                 "(main)\t2\t5\t25\nTemplate\t1\t3\t13\n",
             )
 
+    def test_sqlite_accepts_wikipedia_fields_larger_than_default_csv_limit(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            facts = root / "pages.tsv"
+            dimensions = root / "namespaces.tsv"
+            text_value = "x" * 140_000
+            facts.write_text(
+                "record_id\tdimension_key\tword_count\ttext_bytes\ttext\n"
+                f"1\t0\t1\t{len(text_value)}\t{text_value}\n",
+                encoding="utf-8",
+            )
+            dimensions.write_text(
+                "dimension_key\tcategory\n0\t(main)\n", encoding="utf-8"
+            )
+            output = root / "sqlite.tsv"
+            sqlite_benchmark.run(facts, dimensions, root / "large.db", output)
+            self.assertEqual(output.read_text(encoding="utf-8"), "(main)\t1\t1\t140000\n")
+
     def test_unknown_dimension_fails_instead_of_dropping_record(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

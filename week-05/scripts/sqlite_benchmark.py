@@ -8,6 +8,7 @@ import csv
 import json
 from pathlib import Path
 import sqlite3
+import sys
 
 
 QUERY = """
@@ -17,6 +18,17 @@ JOIN dimensions AS d ON d.dimension_key = f.dimension_key
 GROUP BY d.category
 ORDER BY d.category
 """
+
+# Real Wikipedia pages can exceed csv's conservative 128 KiB default field
+# limit. The TSV is produced by our own sanitizer, so permit platform-sized
+# text fields while retaining the exact five-column validation below.
+field_limit = sys.maxsize
+while True:
+    try:
+        csv.field_size_limit(field_limit)
+        break
+    except OverflowError:
+        field_limit //= 10
 
 
 def rows(path, expected_fields):
