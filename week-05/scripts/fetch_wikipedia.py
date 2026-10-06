@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -95,6 +96,14 @@ def main():
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-compressed", type=parse_size, default=parse_size("30GiB"))
     parser.add_argument("--manifest-only", action="store_true")
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        choices=range(1, 9),
+        metavar="1-8",
+        help="bounded parallel downloads; default 1",
+    )
     args = parser.parse_args()
     with open_url(args.status_url) as response:
         status = json.load(response)
@@ -111,9 +120,14 @@ def main():
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
     )
     if not args.manifest_only:
-        for part in parts:
-            print(f"Downloading {part['name']} ({part['bytes']} bytes)", flush=True)
-            download(part, args.output_dir)
+        with ThreadPoolExecutor(max_workers=args.workers) as executor:
+            futures = {
+                executor.submit(download, part, args.output_dir): part for part in parts
+            }
+            for future in as_completed(futures):
+                part = futures[future]
+                future.result()
+                print(f"Verified {part['name']} ({part['bytes']} bytes)", flush=True)
 
 
 if __name__ == "__main__":
