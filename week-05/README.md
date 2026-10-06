@@ -88,16 +88,22 @@ evidence for the redesign but not a controlled universal speedup claim.
 
 ## Wikipedia data and provenance
 
-The source is the English Wikipedia `pages-articles-multistream` split dump
-dated October 1, 2026 and completed October 2. The pinned machine-readable
-manifest is:
+The source is the completed English Wikipedia `pages-articles-multistream`
+split dump dated September 1, 2026. The machine-readable source is:
 
-`https://dumps.wikimedia.org/enwiki/20261001/dumpstatus.json`
+`https://dumps.wikimedia.org/enwiki/20260901/dumpstatus.json`
 
-It identifies 71 split article archives totaling 26,899,623,591 compressed
-bytes (25.05 GiB), with source URLs and SHA-1 values. The downloader verifies
+It identifies 71 split article archives totaling 26,797,538,304 compressed
+bytes (24.96 GiB), with source URLs and SHA-1 values. The downloader verifies
 size and SHA-1 before accepting each file. The preparation program also
 records a local SHA-256 for every source part used.
+
+The experiment initially captured the in-progress October 1 dump, but
+Wikimedia reset that run on October 6: its status returned to `waiting` and its
+temporary article objects returned HTTP 404. Rather than mix snapshots or use
+unverifiable files, the run moved to the latest directory explicitly marked
+`Dump complete`, September 1. The captured immutable manifest makes the exact
+71-file selection reproducible even if status metadata changes later.
 
 The parser reads bzip2 streams directly instead of materializing a giant XML
 file. It creates two generic relations:
@@ -160,7 +166,7 @@ designed to separate that startup floor from throughput at larger sizes.
 ### Runtime results
 
 No Wikipedia timing table is published yet. The live cluster preflight passed
-on October 6, 2026, and the pinned dump pipeline is running. Results will be
+on October 6, 2026, and the completed-dump pipeline is being staged. Results will be
 inserted only from preserved JSON manifests after the required runs succeed.
 
 ## Cluster safety and reproduction
@@ -176,14 +182,14 @@ data drive rather than the small root filesystem:
 
 ```bash
 python3 week-05/scripts/fetch_wikipedia.py \
-  --status-url https://dumps.wikimedia.org/enwiki/20261001/dumpstatus.json \
+  --status-url https://dumps.wikimedia.org/enwiki/20260901/dumpstatus.json \
   --output-dir /data/week-05/wikipedia-source \
   --max-compressed 30GiB
 
 python3 week-05/scripts/prepare_wikipedia.py \
   --source-manifest /data/week-05/wikipedia-source/source-manifest.json \
   --output-root /data/week-05/samples \
-  --snapshot 20261001 \
+  --snapshot 20260901 \
   --target 2MiB --target 128MiB --target 1GiB \
   --target 10GiB --target 100GiB
 ```
@@ -193,7 +199,7 @@ Then run the complete matrix from the repository root:
 ```bash
 bash week-05/scripts/run-benchmark-matrix.sh \
   /data/week-05/samples \
-  /datasets/wikipedia/20261001/week05 \
+  /datasets/wikipedia/20260901/week05 \
   /results/wikipedia/week05-UNIQUE-RUN-ID \
   /data/week-05/runtime/UNIQUE-RUN-ID
 ```

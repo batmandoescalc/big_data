@@ -12,7 +12,7 @@ Next safe actions:
 2. Run `scripts/preflight-cluster.sh` read-only.
 3. Repeat all tests on the Linux controller, including the Unix-specific older
    Week 2/4 cases.
-4. Download the pinned 20261001 dump onto the mounted data disk, not root.
+4. Download the completed, pinned 20260901 dump onto the mounted data disk, not root.
 5. Prepare all nested samples and run the matrix with new HDFS paths.
 6. Fill the README and Wiki runtime table from `runtime-summary.csv`.
 7. Publish the Wiki, GitHub replies, issue update, and an unmerged PR to `dev`

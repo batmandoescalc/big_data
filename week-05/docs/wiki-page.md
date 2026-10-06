@@ -23,10 +23,12 @@ A large-to-large join still needs a partitioned reduce-side design.
 
 ## Data and experiment
 
-The source is the 2026-10-01 English Wikipedia
-`pages-articles-multistream` split dump, completed October 2. Its 71 files total
-25.05 GiB compressed. Source URLs and checksums come from the pinned
-`dumpstatus.json` file.
+The source is the completed 2026-09-01 English Wikipedia
+`pages-articles-multistream` split dump. Its 71 files total 24.96 GiB
+compressed. Source URLs and checksums come from a captured immutable manifest.
+An initially selected October 1 run was discarded after Wikimedia reset that
+in-progress dump and its temporary objects returned HTTP 404; snapshots were
+not mixed.
 
 The parser streams bzip2/XML and creates:
 
