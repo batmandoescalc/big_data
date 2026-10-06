@@ -14,6 +14,10 @@ rows=$4
 # shellcheck disable=SC1091
 source /etc/profile.d/hadoop.sh
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+week_dir="$(cd -- "$script_dir/../.." && pwd)"
+repo_root="$(cd -- "$week_dir/.." && pwd)"
+runtime_dir="$week_dir/runtime/$(basename "$base")"
+mkdir -p "$runtime_dir"
 buckets="$base/candidate-pairs"
 pairs="$base/deduped-pairs"
 
@@ -28,14 +32,14 @@ shopt -s nullglob
 jars=("$HADOOP_HOME"/share/hadoop/tools/lib/hadoop-streaming-*.jar)
 [[ ${#jars[@]} -eq 1 ]] || { echo 'Expected one Hadoop Streaming JAR.' >&2; exit 1; }
 
-# Print elapsed seconds for one labeled step, using a monotonic-enough ns clock.
+# Record each command with the repository-wide monotonic timing utility.
 timed() {
   local label=$1; shift
-  local start end
-  start=$(date +%s%N)
-  "$@"
-  end=$(date +%s%N)
-  printf 'TIMING %s %d.%03d s\n' "$label" $(((end - start) / 1000000000)) $((((end - start) / 1000000) % 1000))
+  python3 "$repo_root/common/benchmark/run_timed.py" \
+    --label "$label" \
+    --engine hadoop-streaming \
+    --dataset-id apollo11-week04 \
+    --manifest "$runtime_dir/$label.json" -- "$@"
 }
 
 total_start=$(date +%s%N)
