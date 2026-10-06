@@ -39,6 +39,8 @@ fi
 shopt -s nullglob
 jars=("$HADOOP_HOME"/share/hadoop/tools/lib/hadoop-streaming-*.jar)
 [[ ${#jars[@]} -eq 1 ]] || { echo "Expected one Hadoop Streaming JAR" >&2; exit 1; }
+default_fs=$(hdfs getconf -confKey fs.defaultFS)
+dimension_uri="${default_fs%/}${dimensions}#namespaces.tsv"
 
 python3 "$repo_root/common/benchmark/run_timed.py" \
   --label map-side-join-aggregation \
@@ -52,7 +54,7 @@ python3 "$repo_root/common/benchmark/run_timed.py" \
     -D mapreduce.framework.name=yarn \
     -D mapreduce.job.name="week05-${dataset_id}" \
     -D mapreduce.job.reduces=1 \
-    -files "$dimensions#namespaces.tsv,$script_dir/map_join_aggregate.py,$script_dir/aggregate_reducer.py" \
+    -files "$dimension_uri,$script_dir/map_join_aggregate.py,$script_dir/aggregate_reducer.py" \
     -input "$facts" \
     -output "$output" \
     -mapper "python3 map_join_aggregate.py namespaces.tsv" \

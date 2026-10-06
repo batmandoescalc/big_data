@@ -20,6 +20,7 @@ source /etc/profile.d/hadoop.sh
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 week_dir="$(cd -- "$script_dir/.." && pwd)"
 repo_root="$(cd -- "$week_dir/.." && pwd)"
+[[ ! -e "$runtime_root" ]] || { echo "Immutable runtime root already exists: $runtime_root" >&2; exit 1; }
 mkdir -p "$runtime_root"
 
 "$script_dir/preflight-cluster.sh"
@@ -30,10 +31,13 @@ for sample in "$local_root"/sample-*; do
   facts="$sample/pages.tsv"
   dimensions="$sample/namespaces.tsv"
   manifest="$sample/manifest.json"
-  read -r dataset_id rows bytes output_rows complete < <(
-    python3 -c 'import json,sys; d=json.load(open(sys.argv[1], encoding="utf-8")); print(d["dataset_id"], d["page_rows"], d["actual_bytes"], d["output_rows"], int(d["complete"]))' "$manifest"
+  read -r dataset_id rows bytes output_rows complete source_exhausted < <(
+    python3 -c 'import json,sys; d=json.load(open(sys.argv[1], encoding="utf-8")); print(d["dataset_id"], d["page_rows"], d["actual_bytes"], d["output_rows"], int(d["complete"]), int(d.get("source_exhausted", False)))' "$manifest"
   )
-  [[ "$complete" == "1" ]] || { echo "Incomplete sample: $sample" >&2; exit 1; }
+  if [[ "$complete" != "1" && "$source_exhausted" != "1" ]]; then
+    echo "Incomplete sample without an exhausted authentic source: $sample" >&2
+    exit 1
+  fi
 
   hdfs_input="$hdfs_input_root/$sample_name"
   if hdfs dfs -test -e "$hdfs_input"; then
@@ -49,8 +53,12 @@ for sample in "$local_root"/sample-*; do
   # SQLite is mandatory through 10 GiB. At larger sizes it runs only when
   # five input-size equivalents remain free for three databases plus margin.
   sqlite_allowed=1
+  available_local=$(df -B1 --output=avail "$sample" | awk 'NR==2 {print $1}')
+  if (( bytes <= 10737418240 && available_local < bytes * 4 )); then
+    echo "Insufficient local workspace for required SQLite runs: $sample" >&2
+    exit 1
+  fi
   if (( bytes > 10737418240 )); then
-    available_local=$(df -B1 --output=avail "$sample" | awk 'NR==2 {print $1}')
     (( available_local >= bytes * 5 )) || sqlite_allowed=0
   fi
 

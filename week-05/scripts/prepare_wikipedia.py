@@ -71,7 +71,11 @@ def iter_dump(path: Path, namespaces: dict[str, str], stats: dict[str, int]):
     opener = bz2.open if path.suffix.lower() == ".bz2" else open
     with opener(path, "rb") as stream:
         try:
-            for event, element in ET.iterparse(stream, events=("end",)):
+            context = ET.iterparse(stream, events=("start", "end"))
+            _, root = next(context)
+            for event, element in context:
+                if event != "end":
+                    continue
                 name = local_name(element.tag)
                 if name == "namespace" and "key" in element.attrib:
                     key = element.attrib["key"]
@@ -86,9 +90,13 @@ def iter_dump(path: Path, namespaces: dict[str, str], stats: dict[str, int]):
                         stats["malformed_pages"] += 1
                     else:
                         stats["pages_seen"] += 1
-                        yield record
                     element.clear()
-        except ET.ParseError as error:
+                    # ElementTree otherwise leaves millions of cleared page
+                    # placeholders attached to the root on a full dump.
+                    root.clear()
+                    if record is not None:
+                        yield record
+        except (ET.ParseError, StopIteration) as error:
             raise ValueError(f"malformed XML in {path}: {error}") from error
 
 
@@ -159,6 +167,7 @@ def prepare(sources, output_root: Path, targets, snapshot="unknown", source_urls
     if not namespaces:
         raise ValueError("dump did not contain namespace metadata")
     generated = datetime.now(timezone.utc).isoformat()
+    source_exhausted = not all(sample["complete"] for sample in samples)
     for sample in samples:
         dimensions = sample["directory"] / "namespaces.tsv"
         with dimensions.open("w", encoding="utf-8", newline="") as output:
@@ -175,6 +184,7 @@ def prepare(sources, output_root: Path, targets, snapshot="unknown", source_urls
             "dimension_rows": len(namespaces),
             "output_rows": len(sample["dimension_keys"]),
             "complete": sample["complete"],
+            "source_exhausted": source_exhausted,
             "generated_utc": generated,
             "malformed_pages": stats["malformed_pages"],
             "sources": source_records,

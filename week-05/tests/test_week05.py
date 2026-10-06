@@ -131,6 +131,7 @@ class WikipediaPreparationTests(unittest.TestCase):
             self.assertEqual(manifest["output_rows"], 2)
             self.assertEqual(manifest["malformed_pages"], 1)
             self.assertFalse(manifest["complete"])
+            self.assertTrue(manifest["source_exhausted"])
             dimensions = (outputs[1] / "namespaces.tsv").read_text(encoding="utf-8")
             self.assertIn("0\t(main)\n", dimensions)
             self.assertIn("10\tTemplate\n", dimensions)
@@ -138,10 +139,13 @@ class WikipediaPreparationTests(unittest.TestCase):
     def test_malformed_xml_is_reported(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            source = root / "bad.xml"
-            source.write_text("<mediawiki><page>", encoding="utf-8")
-            with self.assertRaisesRegex(ValueError, "malformed XML"):
-                prepare.prepare([source], root / "out", [100], "bad")
+            for index, contents in enumerate(("<mediawiki><page>", "")):
+                source = root / f"bad-{index}.xml"
+                source.write_text(contents, encoding="utf-8")
+                with self.subTest(contents=contents), self.assertRaisesRegex(
+                    ValueError, "malformed XML"
+                ):
+                    prepare.prepare([source], root / f"out-{index}", [100], "bad")
 
     def test_refuses_existing_output(self):
         with tempfile.TemporaryDirectory() as temporary:
