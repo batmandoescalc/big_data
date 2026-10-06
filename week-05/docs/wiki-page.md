@@ -4,7 +4,7 @@
 
 This week asks why SQLite finished the small Apollo query almost instantly
 while the original two-job Hadoop version took about 95 seconds, and how that
-comparison changes as the data grows from megabytes toward 100 GiB.
+comparison changes as the data grows from megabytes through 20 GiB.
 
 ## Join redesign
 
@@ -35,7 +35,7 @@ The parser streams bzip2/XML and creates:
 - `pages.tsv`: page ID, namespace ID, words, text bytes, and text;
 - `namespaces.tsv`: namespace ID and name.
 
-Samples target 2 MiB, 128 MiB, 1 GiB, 10 GiB, and 100 GiB. They contain only
+Samples target 2 MiB, 128 MiB, 1 GiB, 10 GiB, and 20 GiB. They contain only
 authentic complete records and are nested rather than duplicated.
 
 SQLite and Hadoop run the same join/group/aggregate query three times per

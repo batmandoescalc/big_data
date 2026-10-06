@@ -126,7 +126,7 @@ Planned immutable samples:
 | 128 MiB | 3 | 3 | awaiting cluster/network |
 | 1 GiB | 3 | 3 | awaiting cluster/network |
 | 10 GiB | 3 | 3 | awaiting cluster/network |
-| 100 GiB | 0 or 3 after disk preflight | 3 | awaiting cluster/network |
+| 20 GiB | 3 | 3 | awaiting source staging |
 
 Preparation/download time is recorded separately from query time.
 
@@ -191,7 +191,7 @@ python3 week-05/scripts/prepare_wikipedia.py \
   --output-root /data/week-05/samples \
   --snapshot 20260901 \
   --target 2MiB --target 128MiB --target 1GiB \
-  --target 10GiB --target 100GiB
+  --target 10GiB --target 20GiB
 ```
 
 Then run the complete matrix from the repository root:
@@ -205,9 +205,10 @@ bash week-05/scripts/run-benchmark-matrix.sh \
 ```
 
 All HDFS inputs/outputs must be new. Inputs are uploaded with replication two;
-the runner preserves all prior Week 2–4 paths. The 100 GiB SQLite attempt is
-skipped with an explicit reason if five input-size equivalents of local free
-space are unavailable.
+the runner preserves all prior Week 2–4 paths. The original 100 GiB stretch
+target was reduced to 20 GiB during the live run so the repeated SQLite and
+Hadoop measurements could finish within the available lab window. This is
+still roughly four orders of magnitude larger than the original 2 MiB case.
 
 ## Spark estimate
 
