@@ -84,6 +84,9 @@ class WikipediaPreparationTests(unittest.TestCase):
                         "enwiki-pages-articles-multistream2.xml-p3p4.bz2": {
                             "url": "/two.bz2", "size": 60, "sha1": "b"
                         },
+                        "enwiki-pages-articles-multistream1.xml-p10p20.bz2": {
+                            "url": "/later.bz2", "size": 60, "sha1": "c"
+                        },
                         "enwiki-pages-articles-multistream1.xml-p1p2.bz2": {
                             "url": "/one.bz2", "size": 50, "sha1": "a"
                         },

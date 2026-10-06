@@ -15,7 +15,9 @@ import urllib.request
 from prepare_wikipedia import parse_size
 
 
-PART_RE = re.compile(r"pages-articles-multistream(\d+)\.xml-p\d+p\d+\.bz2$")
+PART_RE = re.compile(
+    r"pages-articles-multistream(\d+)\.xml-p(\d+)p(\d+)\.bz2$"
+)
 USER_AGENT = "CSE4099-big-data-study/1.0 (+https://github.com/batmandoescalc/big_data)"
 
 
@@ -30,10 +32,18 @@ def select_parts(status, max_compressed_bytes):
             match = PART_RE.search(name)
             if not match or not metadata.get("url") or not metadata.get("size"):
                 continue
-            candidates.append((int(match.group(1)), name, metadata))
+            candidates.append(
+                (
+                    int(match.group(1)),
+                    int(match.group(2)),
+                    int(match.group(3)),
+                    name,
+                    metadata,
+                )
+            )
     selected = []
     total = 0
-    for _, name, metadata in sorted(candidates):
+    for _, _, _, name, metadata in sorted(candidates):
         size = int(metadata["size"])
         if selected and total + size > max_compressed_bytes:
             break
