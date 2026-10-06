@@ -62,6 +62,18 @@ def select_parts(status, max_compressed_bytes):
     return selected
 
 
+def load_manifest_parts(path, max_compressed_bytes):
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    parts = manifest.get("parts") or []
+    required = {"name", "url", "bytes", "sha1"}
+    if not parts or any(not required.issubset(part) for part in parts):
+        raise ValueError("source manifest contained no complete dump-part records")
+    total = sum(int(part["bytes"]) for part in parts)
+    if total > max_compressed_bytes:
+        raise ValueError("source manifest exceeds --max-compressed")
+    return parts, manifest
+
+
 def shard_parts(parts, count, index):
     if count < 1 or index < 0 or index >= count:
         raise ValueError("shard index must be between zero and shard count minus one")
@@ -98,7 +110,13 @@ def download(part, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--status-url", required=True, help="pinned dumpstatus.json URL")
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--status-url", help="pinned dumpstatus.json URL")
+    source.add_argument(
+        "--source-manifest",
+        type=Path,
+        help="previously captured immutable source manifest",
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--max-compressed", type=parse_size, default=parse_size("30GiB"))
     parser.add_argument("--manifest-only", action="store_true")
@@ -113,9 +131,15 @@ def main():
     parser.add_argument("--shard-count", type=int, default=1)
     parser.add_argument("--shard-index", type=int, default=0)
     args = parser.parse_args()
-    with open_url(args.status_url) as response:
-        status = json.load(response)
-    all_parts = select_parts(status, args.max_compressed)
+    source_metadata = {}
+    if args.source_manifest:
+        all_parts, source_metadata = load_manifest_parts(
+            args.source_manifest, args.max_compressed
+        )
+    else:
+        with open_url(args.status_url) as response:
+            status = json.load(response)
+        all_parts = select_parts(status, args.max_compressed)
     try:
         parts = shard_parts(all_parts, args.shard_count, args.shard_index)
     except ValueError as error:
@@ -124,7 +148,8 @@ def main():
     manifest = {
         "schema_version": 1,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "status_url": args.status_url,
+        "status_url": args.status_url or source_metadata.get("status_url"),
+        "source_manifest": str(args.source_manifest) if args.source_manifest else None,
         "selected_compressed_bytes": sum(part["bytes"] for part in parts),
         "full_selection_parts": len(all_parts),
         "shard_count": args.shard_count,

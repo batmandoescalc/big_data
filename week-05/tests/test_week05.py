@@ -57,6 +57,22 @@ def run_script(path, data, *args, check=True):
 
 
 class WikipediaPreparationTests(unittest.TestCase):
+    def test_pinned_manifest_can_replace_mutable_dump_status(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "source-manifest.json"
+            parts = [
+                {
+                    "name": "part.bz2",
+                    "url": "https://example.test/part.bz2",
+                    "bytes": 7,
+                    "sha1": "abc",
+                }
+            ]
+            path.write_text(json.dumps({"parts": parts}), encoding="utf-8")
+            loaded, metadata = fetch.load_manifest_parts(path, 10)
+            self.assertEqual(loaded, parts)
+            self.assertEqual(metadata["parts"], parts)
+
     def test_download_verifies_checksum_and_existing_file(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
