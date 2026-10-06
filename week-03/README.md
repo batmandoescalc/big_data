@@ -93,6 +93,22 @@ earlier run.
 | recovery | 11 | 66 |
 | remote-site | 35 | 233 |
 
+The totals become more meaningful when normalized. Crew members account for
+53.33% of matched utterances but 46.41% of words, averaging 11.87 words per
+utterance. Mission control accounts for 46.13% of utterances but 53.33% of
+words, averaging 15.77 words per utterance. Thus, mission control produced 606
+fewer utterances but 7,943 more words. A reasonable document-level
+interpretation is that crew responses were often concise while controllers
+gave longer instructions, status information, and explanations. This is a
+description of the transcript, not a psychological or causal conclusion:
+speaker labels, transcription conventions, and the exclusion of ten unmatched
+records all limit what can be inferred.
+
+![Apollo speaker-category comparison](docs/speaker-results.svg)
+
+The chart is reproducible with
+[`plot_speaker_results.py`](scripts/plot_speaker_results.py).
+
 SQLite and Hadoop each produced 8,420 joined rows and four aggregate rows.
 [verify_results.py](scripts/verify_results.py) sorts both outputs before
 comparison because reducer value order is not meaningful. Both comparisons
@@ -116,11 +132,23 @@ start time, elapsed seconds, exit status, row counts, and YARN application IDs.
 | Hadoop grouping and aggregation | 46.369373 seconds |
 | Hadoop full two-job pipeline | 95.340955 seconds |
 
-The Apollo input is only about one megabyte after conversion. Hadoop spends
-most of this run starting JVMs, requesting YARN containers, scheduling tasks,
-and shuffling data. SQLite runs in one local process. A meaningful scalability
-comparison would require larger datasets, repeated trials, controlled hardware,
-and separate measurements of loading, computation, and output.
+The Apollo source is about 2.2 MB and the relational input is smaller still.
+That is below a normal HDFS block, so it creates too little map work to keep
+three workers busy. The two-stage Hadoop pipeline paid fixed costs twice:
+
+- YARN accepted and scheduled two applications and allocated containers.
+- Each map/reduce task started a JVM and a Python Streaming process.
+- The join shuffled by speaker code, wrote an intermediate result to HDFS,
+  and the aggregation read and shuffled that result again.
+- Each job used one reducer; that was sufficient for four final categories but
+  offered no reduce-side parallelism.
+
+The measured job times total 87.34 seconds; the remaining roughly eight
+seconds in the 95.34-second pipeline include checks and inter-job file work.
+SQLite stayed in one process and memory. The result therefore measures Hadoop
+startup and coordination overhead on tiny data, not its large-data throughput.
+Week 5 introduces repeated, nested Wikipedia samples to show when added input
+work begins to amortize those fixed costs.
 
 ## Section 2.4: Spark and TensorFlow
 
@@ -131,12 +159,15 @@ lost partitions can be recomputed without storing every intermediate result.
 
 The first useful Spark experiment would repeat this join and aggregation with
 Spark DataFrames or RDDs, then compare the code and intermediate I/O with the
-two Hadoop jobs. Later, Spark can support the study's distributed-clustering
-work.
+two Hadoop jobs. Spark would probably reduce the multi-stage Hadoop time by
+reusing executors, broadcasting the tiny lookup table, and avoiding the HDFS
+intermediate. A cold Spark-on-YARN application would still have driver and
+executor startup costs, so it is unlikely to beat SQLite on this tiny input.
+That estimate is intentionally not presented as a measurement.
 
 Spark is separate software, but it can use the current HDFS and YARN cluster;
-another VM is not required. A future deployment should investigate the current
-Spark 3.5 maintenance release because Spark 3.5 supports Java 11. Spark 4
+another VM is not required. A future deployment should use Spark 3.5.7 because
+the Spark 3.5 line supports Java 11. Spark 4
 requires Java 17, while this Hadoop 3.4.3 cluster currently uses Java 11. A
 YARN deployment can distribute Spark libraries from an archive in HDFS rather
 than requiring a permanent full installation on every worker. No Spark package
@@ -149,8 +180,8 @@ require a carefully labeled dataset and a defined evaluation measure.
 
 References:
 
-- [Spark 3.5 overview](https://spark.apache.org/docs/3.5.6/)
-- [Running Spark on YARN](https://spark.apache.org/docs/latest/running-on-yarn)
+- [Spark 3.5.7 overview](https://spark.apache.org/docs/3.5.7/)
+- [Running Spark 3.5.7 on YARN](https://spark.apache.org/docs/3.5.7/running-on-yarn.html)
 
 ## Reproduction and tests
 

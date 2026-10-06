@@ -7,14 +7,13 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 4 covers MMDS Chapter 3, "Finding Similar Items." We wrote shingling,
-minhash, and locality-sensitive hashing (LSH) scripts and used them to find
-replayed passages across the three Apollo 11 transcripts. Exact Jaccard
-similarity for every pair that shares a shingle serves as ground truth. The
-chosen LSH setting finds 93% of cross-file near-duplicates. The Hadoop
-Streaming version of the LSH step produced exactly the same 8,842 candidate
-pairs as the local code. See the [Week 4 write-up](week-04/README.md) and the
-[hand-worked walkthrough](week-04/docs/minhash-lsh-walkthrough.md).
+Week 5 investigates scaling and fixed distributed-system overhead. It replaces
+the buffered Week 3 join with a one-job map-side replicated join, validates the
+new design against SQLite on Apollo, and prepares a repeated SQLite/Hadoop
+comparison on nested Wikipedia samples from 2 MiB through about 100 GiB. The
+implementation is ready, but live scale timings are pending approved-network
+access to the cluster. See the [Week 5 write-up](week-05/README.md) and
+[current status](week-05/docs/STATUS.md).
 
 ## Intended architecture
 
@@ -40,6 +39,8 @@ See [the current status](week-02/docs/STATUS.md).
   grouping and aggregation, SQL comparison, runtime evidence, and Spark research.
 - [Week 4](week-04/README.md): shingling, minhash, LSH, and finding replayed
   passages in the Apollo 11 transcripts, locally and on Hadoop.
+- [Week 5](week-05/README.md): join redesign, shared timing evidence,
+  Wikipedia scaling, SQLite/Hadoop comparison, and a Spark estimate.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
@@ -52,6 +53,7 @@ Run the tests from the repository root:
 python3 -m unittest discover -s week-02/tests -v
 python3 -m unittest discover -s week-03/tests -v
 python3 -m unittest discover -s week-04/tests -v
+python3 -m unittest discover -s week-05/tests -v
 ```
 
 ## Provisioning safety
