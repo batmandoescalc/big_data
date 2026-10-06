@@ -23,7 +23,7 @@ Updated October 6, 2026.
 
 - Download/prepare the pinned 25.05 GiB compressed Wikipedia dump.
 - Run three SQLite/Hadoop attempts at 2 MiB, 128 MiB, 1 GiB, and 10 GiB.
-- Run both engines through the revised 20 GiB cap and record all three attempts.
+- Run both engines through the revised 2 GiB cap and record all three attempts.
 - Populate the final runtime/counter/crossover table.
 - Publish the Wiki update, GitHub review replies, issue progress comment, and
   final unmerged PR after evidence is present.

@@ -122,11 +122,10 @@ Planned immutable samples:
 
 | Target | SQLite runs | Hadoop runs | Current status |
 | --- | ---: | ---: | --- |
-| 2 MiB | 3 | 3 | awaiting cluster/network |
-| 128 MiB | 3 | 3 | awaiting cluster/network |
-| 1 GiB | 3 | 3 | awaiting cluster/network |
-| 10 GiB | 3 | 3 | awaiting cluster/network |
-| 20 GiB | 3 | 3 | awaiting source staging |
+| 2 MiB | 3 | 3 | running |
+| 128 MiB | 3 | 3 | running |
+| 1 GiB | 3 | 3 | running |
+| 2 GiB | 3 | 3 | running |
 
 Preparation/download time is recorded separately from query time.
 
@@ -190,8 +189,7 @@ python3 week-05/scripts/prepare_wikipedia.py \
   --source-manifest /data/week-05/wikipedia-source/source-manifest.json \
   --output-root /data/week-05/samples \
   --snapshot 20260901 \
-  --target 2MiB --target 128MiB --target 1GiB \
-  --target 10GiB --target 20GiB
+  --target 2MiB --target 128MiB --target 1GiB --target 2GiB
 ```
 
 Then run the complete matrix from the repository root:
@@ -206,9 +204,10 @@ bash week-05/scripts/run-benchmark-matrix.sh \
 
 All HDFS inputs/outputs must be new. Inputs are uploaded with replication two;
 the runner preserves all prior Week 2–4 paths. The original 100 GiB stretch
-target was reduced to 20 GiB during the live run so the repeated SQLite and
-Hadoop measurements could finish within the available lab window. This is
-still roughly four orders of magnitude larger than the original 2 MiB case.
+target was first reduced to 20 GiB and then to 2 GiB after live measurement
+showed XML normalization was single-core and CPU-bound. The complete 24.96 GiB
+compressed source remains verified for a future parallel or overnight run;
+the live matrix still spans a 1,024-fold change from 2 MiB to 2 GiB.
 
 ## Spark estimate
 
