@@ -62,6 +62,12 @@ def select_parts(status, max_compressed_bytes):
     return selected
 
 
+def shard_parts(parts, count, index):
+    if count < 1 or index < 0 or index >= count:
+        raise ValueError("shard index must be between zero and shard count minus one")
+    return parts[index::count]
+
+
 def sha1(path):
     digest = hashlib.sha1()
     with path.open("rb") as source:
@@ -104,16 +110,25 @@ def main():
         metavar="1-8",
         help="bounded parallel downloads; default 1",
     )
+    parser.add_argument("--shard-count", type=int, default=1)
+    parser.add_argument("--shard-index", type=int, default=0)
     args = parser.parse_args()
     with open_url(args.status_url) as response:
         status = json.load(response)
-    parts = select_parts(status, args.max_compressed)
+    all_parts = select_parts(status, args.max_compressed)
+    try:
+        parts = shard_parts(all_parts, args.shard_count, args.shard_index)
+    except ValueError as error:
+        parser.error(str(error))
     args.output_dir.mkdir(parents=True, exist_ok=True)
     manifest = {
         "schema_version": 1,
         "generated_utc": datetime.now(timezone.utc).isoformat(),
         "status_url": args.status_url,
         "selected_compressed_bytes": sum(part["bytes"] for part in parts),
+        "full_selection_parts": len(all_parts),
+        "shard_count": args.shard_count,
+        "shard_index": args.shard_index,
         "parts": parts,
     }
     (args.output_dir / "source-manifest.json").write_text(

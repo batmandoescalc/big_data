@@ -108,6 +108,17 @@ class WikipediaPreparationTests(unittest.TestCase):
         with self.assertRaises(Exception):
             prepare.parse_size("2MB")
 
+    def test_download_shards_are_disjoint_and_cover_every_part(self):
+        parts = [{"name": str(index)} for index in range(10)]
+        shards = [fetch.shard_parts(parts, 3, index) for index in range(3)]
+        self.assertEqual(
+            sorted(part["name"] for shard in shards for part in shard),
+            [str(index) for index in range(10)],
+        )
+        self.assertTrue(set(map(id, shards[0])).isdisjoint(map(id, shards[1])))
+        with self.assertRaises(ValueError):
+            fetch.shard_parts(parts, 3, 3)
+
     def test_streaming_unicode_multiline_and_record_boundaries(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
