@@ -231,7 +231,7 @@ and failed timer records, and Hadoop-counter parsing.
 python3 -m unittest discover -s week-05/tests -v
 ```
 
-All 13 Week 5 tests pass locally. Week 3's 10 tests also pass. Some older Week
+All 14 Week 5 tests pass locally. Week 3's 10 tests also pass. Some older Week
 2/4 tests rely on Unix-only modules, symlinks, and UTF-8 process defaults, so
 their complete regression run must be repeated on the Linux controller rather
 than interpreted as Windows algorithm failures.
