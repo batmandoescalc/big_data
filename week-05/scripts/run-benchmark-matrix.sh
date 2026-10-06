@@ -25,7 +25,8 @@ mkdir -p "$runtime_root"
 
 "$script_dir/preflight-cluster.sh"
 
-for sample in "$local_root"/sample-*; do
+mapfile -t samples < <(printf '%s\n' "$local_root"/sample-* | sort -V)
+for sample in "${samples[@]}"; do
   [[ -d "$sample" ]] || continue
   sample_name=$(basename "$sample")
   facts="$sample/pages.tsv"
