@@ -36,8 +36,8 @@ See [the current status](week-02/docs/STATUS.md).
   [SSH access](week-01/docs/ssh-access.md).
 - [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
   word-count program, tests, and supporting documentation.
-- Week 3: relational operations in SQL and Hadoop, on Noah's branch and the
-  [wiki](https://github.com/batmandoescalc/big_data/wiki/Week-3:-Relational-Operations-in-SQL-and-Hadoop).
+- [Week 3](week-03/README.md): relational data preparation, natural join,
+  grouping and aggregation, SQL comparison, runtime evidence, and Spark research.
 - [Week 4](week-04/README.md): shingling, minhash, LSH, and finding replayed
   passages in the Apollo 11 transcripts, locally and on Hadoop.
 
@@ -50,6 +50,7 @@ Run the tests from the repository root:
 
 ```bash
 python3 -m unittest discover -s week-02/tests -v
+python3 -m unittest discover -s week-03/tests -v
 python3 -m unittest discover -s week-04/tests -v
 ```
 
