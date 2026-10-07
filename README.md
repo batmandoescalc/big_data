@@ -12,9 +12,11 @@ the buffered Week 3 join with a one-job map-side replicated join, validates the
 new design against SQLite on Apollo, and prepares a repeated SQLite/Hadoop
 comparison on nested Wikipedia samples from 2 MiB through 2 GiB. The
 one-job Apollo run matched SQLite exactly and cut the observed Hadoop wall time
-from about 95 seconds to about 47 seconds. The live Wikipedia scale matrix is
-in progress. See the [Week 5 write-up](week-05/README.md) and [current
-status](week-05/docs/STATUS.md).
+from about 95 seconds to about 47 seconds. The completed Wikipedia matrix has
+three SQLite and three Hadoop attempts at each size, with exact aggregate
+agreement throughout; the Hadoop/SQLite median gap narrowed from about 420x at
+2 MiB to about 1.09x at 2 GiB. See the [Week 5 write-up](week-05/README.md)
+and [current status](week-05/docs/STATUS.md).
 
 ## Intended architecture
 

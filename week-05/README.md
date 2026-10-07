@@ -7,11 +7,11 @@ asks why SQLite completed the Apollo query in a fraction of a second while the
 original two-job Hadoop pipeline took about 95 seconds, whether that gap changes
 as input grows, and whether Spark is likely to help.
 
-The implementation, local validation, and live one-job Apollo validation are
-complete. The Wikipedia timing matrix is in progress on the cluster. No timing
-values are published before their preserved run records exist. The read-only
-preflight passed with three HDFS workers, three YARN workers, healthy HDFS,
-replication two, and sufficient capacity.
+The implementation, local validation, live one-job Apollo validation, and
+Wikipedia timing matrix are complete. Every published Wikipedia result comes
+from preserved JSON timing records, and every SQLite/Hadoop result matched
+exactly. The read-only preflight passed with three HDFS workers, three YARN
+workers, healthy HDFS, replication two, and sufficient capacity.
 
 ## What changed from Week 3
 
@@ -118,14 +118,14 @@ the run, and incomplete page records are counted. Each larger sample begins
 with every complete record in each smaller sample; records are never repeated
 to manufacture scale.
 
-Planned immutable samples:
+Completed immutable samples:
 
-| Target | SQLite runs | Hadoop runs | Current status |
-| --- | ---: | ---: | --- |
-| 2 MiB | 3 | 3 | running |
-| 128 MiB | 3 | 3 | running |
-| 1 GiB | 3 | 3 | running |
-| 2 GiB | 3 | 3 | running |
+| Target | Actual input bytes | Input rows | SQLite runs | Hadoop runs | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| 2 MiB | 2,107,798 | 95 | 3 | 3 | 3/3 exact matches |
+| 128 MiB | 134,224,341 | 3,235 | 3 | 3 | 3/3 exact matches |
+| 1 GiB | 1,073,788,188 | 27,016 | 3 | 3 | 3/3 exact matches |
+| 2 GiB | 2,147,506,425 | 73,557 | 3 | 3 | 3/3 exact matches |
 
 Preparation/download time is recorded separately from query time.
 
@@ -164,9 +164,29 @@ designed to separate that startup floor from throughput at larger sizes.
 
 ### Runtime results
 
-No Wikipedia timing table is published yet. The live cluster preflight passed
-on October 6, 2026, and the completed-dump pipeline is being staged. Results will be
-inserted only from preserved JSON manifests after the required runs succeed.
+All times below are wall-clock seconds. The first run is retained separately;
+the median is the middle value of the three successful chronological attempts.
+Download, checksum verification, HDFS staging, and XML normalization are not
+included in these query times.
+
+| Target | SQLite first | SQLite median | Hadoop first | Hadoop median | Hadoop / SQLite median |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 2 MiB | 0.109 | 0.109 | 47.535 | 45.846 | 419.7x |
+| 128 MiB | 3.192 | 3.335 | 58.052 | 48.885 | 14.7x |
+| 1 GiB | 23.747 | 24.368 | 54.312 | 47.122 | 1.93x |
+| 2 GiB | 56.385 | 56.298 | 54.142 | 61.219 | 1.09x |
+
+The result is not that SQLite is universally faster. It is a small-cluster,
+single query comparison. It does show the expected fixed Hadoop startup floor:
+at 2 MiB Hadoop was about 420 times slower, but by 2 GiB the gap had narrowed
+to about 9%. No crossover was observed in this run. Larger inputs or a workload
+with multiple stages may change that conclusion.
+
+For scale context, the 1 GiB Hadoop attempt read 1,074,219,660 HDFS bytes,
+launched eight map tasks and one reducer, processed 27,017 input records
+(including the header), and emitted five namespace groups. The map-side join
+and combiner reduced the amount of reducer work substantially, but YARN
+scheduling and process startup still remain visible in the runtime.
 
 ## Cluster safety and reproduction
 
@@ -237,10 +257,9 @@ and failed timer records, and Hadoop-counter parsing.
 python3 -m unittest discover -s week-05/tests -v
 ```
 
-All 15 Week 5 tests pass locally. Week 3's 10 tests also pass. Some older Week
-2/4 tests rely on Unix-only modules, symlinks, and UTF-8 process defaults, so
-their complete regression run must be repeated on the Linux controller rather
-than interpreted as Windows algorithm failures.
+All 15 Week 5 tests pass locally. The complete Linux-controller regression
+suite also passed: 20 Week 2 tests, 10 Week 3 tests, 22 Week 4 tests, and 15
+Week 5 tests (67 total).
 
 Generated dumps, TSVs, SQLite databases, timing logs, private access details,
 and cluster identifiers remain ignored by Git.

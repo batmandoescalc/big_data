@@ -2,21 +2,19 @@
 
 Read [STATUS.md](STATUS.md) and the [Week 5 overview](../README.md) first.
 
-The code and local Apollo validation are complete. Do not publish a final
-runtime table or claim Week 5 acceptance until the cluster becomes reachable
-and the preserved JSON manifests support every number.
+The code, live cluster validation, and timing matrix are complete. The
+preserved records contain three SQLite and three Hadoop attempts at 2 MiB,
+128 MiB, 1 GiB, and 2 GiB; every normalized aggregate matched exactly.
 
-Next safe actions:
+Remaining safe actions:
 
-1. Connect through an approved university network.
-2. Run `scripts/preflight-cluster.sh` read-only.
-3. Repeat all tests on the Linux controller, including the Unix-specific older
-   Week 2/4 cases.
-4. Download the completed, pinned 20260901 dump onto the mounted data disk, not root.
-5. Prepare all nested samples and run the matrix with new HDFS paths.
-6. Fill the README and Wiki runtime table from `runtime-summary.csv`.
-7. Publish the Wiki, GitHub replies, issue update, and an unmerged PR to `dev`
+1. Publish the prepared Week 5 Wiki update and update Wiki Home.
+2. Reply to Matt's Week 3 review threads and add a progress comment to issue #6.
+3. Push the final documentation commit and open an unmerged PR to `dev`
    requesting Matt's review.
+4. Treat a larger Wikipedia run as a future, parallel or overnight experiment;
+   do not rerun provisioning, format disks, alter Hadoop configuration, or
+   overwrite existing HDFS paths.
 
 Do not run the provisioning script, format disks, alter Hadoop configuration,
 overwrite prior HDFS paths, or commit generated/private data.

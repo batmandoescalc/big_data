@@ -17,16 +17,22 @@ Updated October 6, 2026.
   nested complete-record samples, SQLite/Hadoop runners, cluster preflight,
   exact comparison, and first/median summarization.
 - Expanded the Week 3 human interpretation and runtime explanation.
-- Week 3 and Week 5 local test suites pass.
+- Downloaded and checksum-verified the pinned 24.96 GiB compressed Wikipedia
+  source; streamed it into nested, authentic 2 MiB, 128 MiB, 1 GiB, and 2 GiB
+  samples.
+- Ran three SQLite and three Hadoop attempts at every sample size. All 24
+  normalized aggregate outputs matched exactly.
+- Recorded the final first-run/median runtime table and Hadoop evidence.
+- Passed the complete Linux-controller regression suite: 67 tests across
+  Weeks 2â€“5.
 
-## In progress
+## Remaining publication work
 
-- Download/prepare the pinned 25.05 GiB compressed Wikipedia dump.
-- Run three SQLite/Hadoop attempts at 2 MiB, 128 MiB, 1 GiB, and 10 GiB.
-- Run both engines through the revised 2 GiB cap and record all three attempts.
-- Populate the final runtime/counter/crossover table.
-- Publish the Wiki update, GitHub review replies, issue progress comment, and
-  final unmerged PR after evidence is present.
+- Publish the Week 5 Wiki update and update Wiki Home.
+- Reply to the relevant PR #4 review threads and add a progress comment to
+  issue #6.
+- Push the final documentation commit and open an unmerged Week 5 PR to `dev`
+  requesting Matt's review.
 
 The October 6 preflight passed on the approved university network with three
 HDFS/YARN workers, healthy HDFS, replication two, and capacity headroom. Do not

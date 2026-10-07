@@ -62,8 +62,24 @@ The lower time is consistent with removing one YARN submission and the HDFS
 intermediate, but the runs occurred at different times and are not a controlled
 universal speedup claim.
 
-The Wikipedia timing matrix is in progress. No placeholder timing values are
-being presented as measurements.
+The Wikipedia timing matrix is complete. Every SQLite/Hadoop aggregate matched
+exactly across three attempts per engine and size.
+
+| Target | Rows | SQLite median (s) | Hadoop median (s) | Hadoop / SQLite |
+| --- | ---: | ---: | ---: | ---: |
+| 2 MiB | 95 | 0.109 | 45.846 | 419.7x |
+| 128 MiB | 3,235 | 3.335 | 48.885 | 14.7x |
+| 1 GiB | 27,016 | 24.368 | 47.122 | 1.93x |
+| 2 GiB | 73,557 | 56.298 | 61.219 | 1.09x |
+
+The evidence shows a large fixed Hadoop startup cost on small data, not that
+SQLite is always better. The gap narrowed sharply as data grew, but there was
+no observed crossover by 2 GiB. Downloading, checksum verification, HDFS
+staging, and XML normalization were measured separately from query time.
+
+The 2 GiB cap was chosen after live measurement showed that the streaming XML
+normalization step was CPU-bound. The verified full source remains available
+for a later parallel or overnight larger-scale experiment.
 
 ## Why small Hadoop was slow
 
