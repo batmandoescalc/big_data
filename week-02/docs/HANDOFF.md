@@ -8,11 +8,10 @@ approved Week 2 wiki page is published.
 
 1. Read this file, then [STATUS.md](STATUS.md) and the
    [Apollo 11 dataset notes](datasets/apollo11.md).
-2. Check `git status --short --branch`. The Week 2 delivery branch is
-   `setup/cluster-readiness`, published in [PR #3](https://github.com/batmandoescalc/big_data/pull/3)
-   against `main`. Matt (`batmandoescalc`) has been requested as reviewer.
-   The PR remains open and unmerged, with automatic merging disabled.
-   Preserve any later changes rather than assuming the working tree is unchanged.
+2. Check `git status --short --branch`. The Week 2 delivery was merged into
+   `main` through [PR #3](https://github.com/batmandoescalc/big_data/pull/3)
+   on September 14, 2026 as commit `c1caf5c`. Preserve any later changes
+   rather than assuming the working tree is unchanged.
 3. Read [the short word-count walkthrough](apollo11-wordcount.md). Resume with
    explaining the mapper and reducer if the student requests a walkthrough.
    Do not repeat the completed run just to restore context.
@@ -93,9 +92,9 @@ stress tests and SQL-style join exercises remain later work. The approved
 [Week 2 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-2:-Examples-of-MapReduce-Algorithms)
 was published in wiki commit `b29e7ab`. Its repository copy is
 [the Week 2 overview](../README.md).
-The student authorized branch publication and a pull request, and explicitly
-reserved review and acceptance for Matt. Do not merge the PR or enable automatic
-merging. This handoff does not authorize publication of unrelated future work.
+The student authorized branch publication and a pull request, and Matt merged
+the completed Week 2 delivery. This handoff does not authorize publication of
+unrelated future work.
 
 Coursework is organized under `week-01/` and `week-02/`. All Week 2 code,
 tests, and documents are under `week-02/`; ignored datasets and private helpers

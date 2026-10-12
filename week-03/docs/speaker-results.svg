@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="500" viewBox="0 0 1000 500">
+<rect width="1000" height="500" fill="white"/>
+<style>text{font-family:Arial,sans-serif;fill:#172033}.title{font-size:22px;font-weight:700}.axis{font-size:13px}.label{font-size:14px}.value{font-size:12px;font-weight:700}</style>
+<text x="40" y="35" class="title">Apollo 11 speaking patterns by category</text>
+<text x="40" y="65" class="axis">Share of matched utterances and words</text>
+<text x="560" y="65" class="axis">Average words per utterance</text>
+<rect x="40" y="78" width="12" height="12" fill="#2563eb"/><text x="58" y="89" class="axis">Utterances</text>
+<rect x="145" y="78" width="12" height="12" fill="#f97316"/><text x="163" y="89" class="axis">Words</text>
+<text x="40" y="143" class="label">Crew</text>
+<rect x="165" y="125" width="373.3" height="18" rx="2" fill="#2563eb"/>
+<rect x="165" y="149" width="324.9" height="18" rx="2" fill="#f97316"/>
+<text x="543.3" y="139" class="value">53.33%</text>
+<text x="494.9" y="163" class="value">46.41%</text>
+<rect x="560" y="134" width="237.4" height="25" rx="3" fill="#16a34a"/>
+<text x="805.4" y="152" class="value">11.87</text>
+<text x="40" y="231" class="label">Mission control</text>
+<rect x="165" y="213" width="322.9" height="18" rx="2" fill="#2563eb"/>
+<rect x="165" y="237" width="373.3" height="18" rx="2" fill="#f97316"/>
+<text x="492.9" y="227" class="value">46.13%</text>
+<text x="543.3" y="251" class="value">53.33%</text>
+<rect x="560" y="222" width="315.4" height="25" rx="3" fill="#16a34a"/>
+<text x="883.4" y="240" class="value">15.77</text>
+<text x="40" y="319" class="label">Recovery</text>
+<rect x="165" y="301" width="0.9" height="18" rx="2" fill="#2563eb"/>
+<rect x="165" y="325" width="0.4" height="18" rx="2" fill="#f97316"/>
+<text x="172.0" y="315" class="value">0.13%</text>
+<text x="172.0" y="339" class="value">0.06%</text>
+<rect x="560" y="310" width="120.0" height="25" rx="3" fill="#16a34a"/>
+<text x="688.0" y="328" class="value">6.00</text>
+<text x="40" y="407" class="label">Remote site</text>
+<rect x="165" y="389" width="2.9" height="18" rx="2" fill="#2563eb"/>
+<rect x="165" y="413" width="1.4" height="18" rx="2" fill="#f97316"/>
+<text x="172.9" y="403" class="value">0.42%</text>
+<text x="172.0" y="427" class="value">0.20%</text>
+<rect x="560" y="398" width="133.2" height="25" rx="3" fill="#16a34a"/>
+<text x="701.2" y="416" class="value">6.66</text>
+<line x1="165" y1="105" x2="165" y2="460" stroke="#94a3b8"/>
+<line x1="560" y1="105" x2="560" y2="460" stroke="#94a3b8"/>
+<text x="40" y="482" class="axis">Source: 8,420 matched transcript utterances; descriptive, not causal.</text>
+</svg>

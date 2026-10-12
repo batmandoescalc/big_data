@@ -7,14 +7,16 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 4 covers MMDS Chapter 3, "Finding Similar Items." We wrote shingling,
-minhash, and locality-sensitive hashing (LSH) scripts and used them to find
-replayed passages across the three Apollo 11 transcripts. Exact Jaccard
-similarity for every pair that shares a shingle serves as ground truth. The
-chosen LSH setting finds 93% of cross-file near-duplicates. The Hadoop
-Streaming version of the LSH step produced exactly the same 8,842 candidate
-pairs as the local code. See the [Week 4 write-up](week-04/README.md) and the
-[hand-worked walkthrough](week-04/docs/minhash-lsh-walkthrough.md).
+Week 5 investigates scaling and fixed distributed-system overhead. It replaces
+the buffered Week 3 join with a one-job map-side replicated join, validates the
+new design against SQLite on Apollo, and prepares a repeated SQLite/Hadoop
+comparison on nested Wikipedia samples from 2 MiB through 2 GiB. The
+one-job Apollo run matched SQLite exactly and cut the observed Hadoop wall time
+from about 95 seconds to about 47 seconds. The completed Wikipedia matrix has
+three SQLite and three Hadoop attempts at each size, with exact aggregate
+agreement throughout; the Hadoop/SQLite median gap narrowed from about 420x at
+2 MiB to about 1.09x at 2 GiB. See the [Week 5 write-up](week-05/README.md)
+and [current status](week-05/docs/STATUS.md).
 
 ## Intended architecture
 
@@ -36,10 +38,12 @@ See [the current status](week-02/docs/STATUS.md).
   [SSH access](week-01/docs/ssh-access.md).
 - [Week 2](week-02/README.md): Hadoop setup, Apollo 11 transcripts, our
   word-count program, tests, and supporting documentation.
-- Week 3: relational operations in SQL and Hadoop, on Noah's branch and the
-  [wiki](https://github.com/batmandoescalc/big_data/wiki/Week-3:-Relational-Operations-in-SQL-and-Hadoop).
+- [Week 3](week-03/README.md): relational data preparation, natural join,
+  grouping and aggregation, SQL comparison, runtime evidence, and Spark research.
 - [Week 4](week-04/README.md): shingling, minhash, LSH, and finding replayed
   passages in the Apollo 11 transcripts, locally and on Hadoop.
+- [Week 5](week-05/README.md): join redesign, shared timing evidence,
+  Wikipedia scaling, SQLite/Hadoop comparison, and a Spark estimate.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
@@ -50,7 +54,9 @@ Run the tests from the repository root:
 
 ```bash
 python3 -m unittest discover -s week-02/tests -v
+python3 -m unittest discover -s week-03/tests -v
 python3 -m unittest discover -s week-04/tests -v
+python3 -m unittest discover -s week-05/tests -v
 ```
 
 ## Provisioning safety
