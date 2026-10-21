@@ -7,16 +7,40 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 5 investigates scaling and fixed distributed-system overhead. It replaces
-the buffered Week 3 join with a one-job map-side replicated join, validates the
-new design against SQLite on Apollo, and prepares a repeated SQLite/Hadoop
-comparison on nested Wikipedia samples from 2 MiB through 2 GiB. The
-one-job Apollo run matched SQLite exactly and cut the observed Hadoop wall time
-from about 95 seconds to about 47 seconds. The completed Wikipedia matrix has
-three SQLite and three Hadoop attempts at each size, with exact aggregate
-agreement throughout; the Hadoop/SQLite median gap narrowed from about 420x at
-2 MiB to about 1.09x at 2 GiB. See the [Week 5 write-up](week-05/README.md)
-and [current status](week-05/docs/STATUS.md).
+The midsemester checkpoint organizes the work completed in Weeks 1-5. The
+cluster, algorithms, experiments, and evidence are unchanged; the focus is
+making them understandable and reproducible for a new reader. Start with the
+[repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
+functions and results, or the [Week 6 checkpoint](week-06/README.md) for the
+Git and documentation audit.
+
+## Getting started
+
+You do not need cluster access to read the study or run its unit tests.
+
+1. Install Git and Python 3. No third-party Python packages are required for
+   the core test suites.
+2. Clone the repository and enter its directory.
+3. Read the [repository guide](docs/REPOSITORY_GUIDE.md) to choose a topic.
+4. Run the local validation suites from the repository root:
+
+   ```bash
+   python3 -m unittest discover -s week-02/tests -v
+   python3 -m unittest discover -s week-03/tests -v
+   python3 -m unittest discover -s week-04/tests -v
+   python3 -m unittest discover -s week-05/tests -v
+   ```
+
+The tests use small fixtures and do not contact the university machines. Run
+the full suite on Linux, macOS, or WSL because the installer-guard tests use
+Unix account and filesystem features that native Windows Python does not have.
+Cluster commands require authorized university access and an already
+provisioned environment. Do not run the provisioning script on the existing
+cluster. Do not commit datasets, credentials, SSH keys, internal hostnames,
+authentication output, or private run logs.
+
+For contributors, [CONTRIBUTING.md](CONTRIBUTING.md) explains the branch,
+testing, review, and data-safety workflow.
 
 ## Intended architecture
 
@@ -44,20 +68,13 @@ See [the current status](week-02/docs/STATUS.md).
   passages in the Apollo 11 transcripts, locally and on Hadoop.
 - [Week 5](week-05/README.md): join redesign, shared timing evidence,
   Wikipedia scaling, SQLite/Hadoop comparison, and a Spark estimate.
+- [Week 6](week-06/README.md): midsemester organization, branch reconciliation,
+  newcomer documentation, and the `dev`-to-`main` checkpoint.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
 and `.local/` directories remain at the repository root for local datasets and
 private access configuration.
-
-Run the tests from the repository root:
-
-```bash
-python3 -m unittest discover -s week-02/tests -v
-python3 -m unittest discover -s week-03/tests -v
-python3 -m unittest discover -s week-04/tests -v
-python3 -m unittest discover -s week-05/tests -v
-```
 
 ## Provisioning safety
 
