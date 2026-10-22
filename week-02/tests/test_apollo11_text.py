@@ -10,6 +10,8 @@ spec.loader.exec_module(module)
 
 
 class TranscriptTextTests(unittest.TestCase):
+    """Apollo 11 web pages become clean transcript text with nothing lost or garbled."""
+
     def extract(self, html):
         parser = module.VisibleText()
         parser.feed(html)

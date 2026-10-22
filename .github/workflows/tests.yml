@@ -1,5 +1,6 @@
 # Runs the local test suites on every push and pull request to dev and main,
-# so a reviewer can see a green or red check before reading the diff.
+# so a reviewer can see a green or red check before reading the diff. The
+# check's summary page shows a plain-English report of what was tested.
 # No cluster access, credentials, or datasets are used.
 name: Local tests
 

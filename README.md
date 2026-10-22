@@ -29,8 +29,9 @@ You do not need cluster access to read the study or run its unit tests.
    bash scripts/run-tests.sh
    ```
 
-   This discovers each `week-*/tests` suite and syntax-checks the tracked shell
-   scripts. To run one week alone, use
+   This discovers each `week-*/tests` suite, syntax-checks the tracked shell
+   scripts, and prints a plain-English GREEN or RED report of what each group
+   of tests checks and what, if anything, failed. To run one week alone, use
    `python3 -m unittest discover -s week-04/tests -v`.
 
 The tests use small fixtures and do not contact the university machines. The

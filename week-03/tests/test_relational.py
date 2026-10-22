@@ -52,6 +52,8 @@ def local_aggregate(joined_tsv):
 
 
 class ParserTests(unittest.TestCase):
+    """Transcript lines become clean table rows, and bad lines are reported, not guessed."""
+
     def test_multiline_inline_unicode_and_metadata(self):
         text = """INTRODUCTION
 00 00 00 04 CDR Inline start
@@ -87,6 +89,8 @@ MARK.
 
 
 class MapReduceTests(unittest.TestCase):
+    """The Hadoop join and group-by match speakers to lines and add them up correctly."""
+
     def setUp(self):
         self.utterances = (
             "record_type\tutterance_id\tmission_time\tspeaker_code\tword_count\ttext\n"
@@ -131,6 +135,8 @@ class MapReduceTests(unittest.TestCase):
 
 
 class EndToEndTests(unittest.TestCase):
+    """The Hadoop pipeline and SQLite give exactly the same answer."""
+
     def test_sqlite_and_streaming_results_match(self):
         transcript = """00 00 00 04 CDR
 Hello moon.
@@ -184,6 +190,8 @@ Unknown speaker.
 
 
 class TimingTests(unittest.TestCase):
+    """The stopwatch around each Hadoop job records its time and job ID."""
+
     def test_timing_wrapper_records_success_and_application_id(self):
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "runtime.json"
