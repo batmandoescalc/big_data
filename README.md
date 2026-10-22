@@ -7,12 +7,45 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-The Hadoop cluster is installed and its initial acceptance test passed. Week 2
-loaded NASA's Apollo 11 transcripts and ran a verified Python word-count job.
-Week 3 converts the air-to-ground transcript into relations and performs a
-natural join followed by grouping and aggregation in both SQLite and Hadoop.
-All 8,420 joined rows and all four aggregate rows match exactly. See the
-[Week 3 write-up and results](week-03/README.md).
+The midsemester checkpoint organizes the work completed in Weeks 1-5. The
+cluster, algorithms, experiments, and evidence are unchanged; the focus is
+making them understandable and reproducible for a new reader. Start with the
+[repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
+functions and results, or the [Week 6 checkpoint](week-06/README.md) for the
+Git and documentation audit.
+
+## Getting started
+
+You do not need cluster access to read the study or run its unit tests.
+
+1. Install Git and Python 3. No third-party Python packages are required for
+   the core test suites.
+2. Clone the repository and enter its directory.
+3. Read the [repository guide](docs/REPOSITORY_GUIDE.md) to choose a topic.
+   Unfamiliar terms are defined in the [glossary](docs/GLOSSARY.md).
+4. Run every local check from the repository root:
+
+   ```bash
+   bash scripts/run-tests.sh
+   ```
+
+   This discovers each `week-*/tests` suite, syntax-checks the tracked shell
+   scripts, and prints a plain-English GREEN or RED report of what each group
+   of tests checks and what, if anything, failed. To run one week alone, use
+   `python3 -m unittest discover -s week-04/tests -v`.
+
+The tests use small fixtures and do not contact the university machines. The
+same checks run automatically on GitHub for every push and pull request to
+`dev` and `main`, under Python 3.9 (the cluster's version) and 3.12. Run
+the full suite on Linux, macOS, or WSL because the installer-guard tests use
+Unix account and filesystem features that native Windows Python does not have.
+Cluster commands require authorized university access and an already
+provisioned environment. Do not run the provisioning script on the existing
+cluster. Do not commit datasets, credentials, SSH keys, internal hostnames,
+authentication output, or private run logs.
+
+For contributors, [CONTRIBUTING.md](CONTRIBUTING.md) explains the branch,
+testing, review, and data-safety workflow.
 
 ## Intended architecture
 
@@ -36,17 +69,17 @@ See [the current status](week-02/docs/STATUS.md).
   word-count program, tests, and supporting documentation.
 - [Week 3](week-03/README.md): relational data preparation, natural join,
   grouping and aggregation, SQL comparison, runtime evidence, and Spark research.
+- [Week 4](week-04/README.md): shingling, minhash, LSH, and finding replayed
+  passages in the Apollo 11 transcripts, locally and on Hadoop.
+- [Week 5](week-05/README.md): join redesign, shared timing evidence,
+  Wikipedia scaling, SQLite/Hadoop comparison, and a Spark estimate.
+- [Week 6](week-06/README.md): midsemester organization, branch reconciliation,
+  newcomer documentation, and the `dev`-to-`main` checkpoint.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
 and `.local/` directories remain at the repository root for local datasets and
 private access configuration.
-
-Run this week's tests from the repository root:
-
-```bash
-python3 -m unittest discover -s week-03/tests -v
-```
 
 ## Provisioning safety
 

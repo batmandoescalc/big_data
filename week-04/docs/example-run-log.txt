@@ -1,0 +1,69 @@
+Week 4 example run log (sanitized)
+==================================
+Hostnames, IP addresses, user names, and local paths are removed. Times are
+wall-clock seconds from a monotonic clock. Full private logs stay in the
+ignored data/ and .local/ directories.
+
+LOCAL PIPELINE (laptop, Python 3.14, standard library only)
+started_utc 2026-10-01T04:44:39Z
+command: python3 week-04/scripts/find_similar.py --output-dir data/week-04/local-20261001T044439Z
+[   0.043 s] split transcripts into windows            (14,201 windows of 50 words, stride 25)
+[   0.155 s] k=3: shingle and hash windows
+[   6.061 s] k=3: minhash signatures (n=100)
+[   3.325 s] k=3: exact Jaccard via inverted index     (7,297,737 pairs sharing a shingle)
+[   0.446 s] k=3: minhash estimate error               (175,375 pairs with Jaccard >= 0.10)
+[   0.363 s] k=3 b=20 r=5: LSH banding
+[   0.404 s] k=3 b=25 r=4: LSH banding                 (final setting, 8,842 candidate pairs)
+[   0.230 s] k=3 b=10 r=10: LSH banding
+[   0.166 s] k=5: shingle and hash windows
+[   5.907 s] k=5: minhash signatures (n=100)
+[   1.058 s] k=5: exact Jaccard via inverted index
+[   0.220 s] k=5: minhash estimate error
+[   0.335 s] k=5 b=20 r=5: LSH banding
+[   0.419 s] k=5 b=25 r=4: LSH banding
+[   0.219 s] k=5 b=10 r=10: LSH banding
+whole command: 20.00 s wall clock, 306 MB peak memory
+(the per-step times above include evaluation, which is not part of LSH itself)
+
+CLUSTER HEALTH CHECK (controller, hadoop service account, before submitting)
+yarn node -list           Total Nodes:3, all RUNNING, 0 running containers
+hdfs dfsadmin -report     3.00 TB configured, 70.33 MB used
+                          under-replicated 0, corrupt 0, missing 0
+python3 --version         Python 3.9.25
+
+CLUSTER RUN (Hadoop 3.4.3 Streaming on YARN, 3 workers)
+HDFS input  /results/apollo11/week04-minhash-lsh-20261001T053647Z/input/signatures.tsv
+HDFS output /results/apollo11/week04-minhash-lsh-20261001T053647Z/candidate-pairs
+            /results/apollo11/week04-minhash-lsh-20261001T053647Z/deduped-pairs
+TIMING hdfs-upload        5.003 s   (14,201 signatures, put into HDFS)
+TIMING lsh-banding-job   61.690 s   job_1790757637442_0004
+    launched map tasks=2, reduce tasks=3, data-local map tasks=2
+    map input records=14201, map output records=355025 (14,201 x 25 bands)
+    reduce output records=15407 (raw pairs, before dedupe)
+    CPU time spent 11.340 s, total map task time 36.329 s, total reduce task time 34.274 s
+TIMING dedupe-job        35.717 s   job_1790757637442_0005
+    launched map tasks=4, reduce tasks=1
+    map input records=15407, reduce output records=8842
+    CPU time spent 4.780 s
+TIMING hadoop-total     101.887 s   (both jobs)
+LOCAL_ROUND_TRIP        127.378 s   (SSH, upload, both jobs, reading results back)
+
+VERIFICATION
+Hadoop deduplicated pairs:      8,842
+Local LSH candidate pairs:      8,842
+Sorted pair lists identical:    yes (byte-for-byte cmp)
+Sum of per-pair band counts:    15,407 = raw pairs from the banding job
+
+EARLIER ATTEMPTS, KEPT FOR THE RECORD
+05:31Z  every map task failed: "import lsh" could not find lsh.py (see README).
+05:34Z  succeeded with the same 8,842 pairs (banding 49.477 s, dedupe 55.224 s,
+        total 109.153 s); its output had a stray empty column, fixed before
+        the run above.
+
+READING THESE NUMBERS
+The local banding step takes 0.4 s; the same work on Hadoop takes about 60 s.
+On 2.2 MB of input, Hadoop's time goes to starting JVMs, asking YARN for
+containers, scheduling, and shuffling, not to banding: the banding job used
+only 11 s of CPU across all tasks. Two runs of identical jobs differed by 12 to
+20 s per job. These timings show Hadoop's fixed overhead on small data. They
+say nothing about how either approach scales.

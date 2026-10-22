@@ -53,6 +53,8 @@ pipeline_start_ns=$(date +%s%N)
 
 python3 "$week_dir/scripts/run_timed.py" \
   --label hadoop-join \
+  --engine hadoop-streaming \
+  --dataset-id apollo11-week03 \
   --manifest "$runtime_dir/hadoop-join.json" \
   --input-rows "$input_rows" \
   --output-rows "$matched_rows" -- \
@@ -72,6 +74,8 @@ hdfs dfs -test -e "$joined/_SUCCESS"
 
 python3 "$week_dir/scripts/run_timed.py" \
   --label hadoop-grouping-aggregation \
+  --engine hadoop-streaming \
+  --dataset-id apollo11-week03 \
   --manifest "$runtime_dir/hadoop-aggregation.json" \
   --input-rows "$matched_rows" \
   --output-rows "$aggregate_rows" -- \
