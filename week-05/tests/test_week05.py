@@ -57,6 +57,8 @@ def run_script(path, data, *args, check=True):
 
 
 class WikipediaPreparationTests(unittest.TestCase):
+    """Wikipedia downloads are verified, split, and turned into rows without corruption."""
+
     def test_pinned_manifest_can_replace_mutable_dump_status(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "source-manifest.json"
@@ -186,6 +188,8 @@ class WikipediaPreparationTests(unittest.TestCase):
 
 
 class RelationalPipelineTests(unittest.TestCase):
+    """The faster one-job Hadoop join matches SQLite and never silently drops a row."""
+
     def test_apollo_adapter_reports_and_excludes_unmatched_speakers(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -290,6 +294,8 @@ class RelationalPipelineTests(unittest.TestCase):
 
 
 class TimingTests(unittest.TestCase):
+    """Benchmark timing records save both successful and failed runs."""
+
     def test_versioned_record_and_counter_parsing(self):
         with tempfile.TemporaryDirectory() as temporary:
             manifest = Path(temporary) / "run.json"

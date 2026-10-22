@@ -7,7 +7,10 @@ both technically correct and explainable by the student who submits it.
 
 1. Start from the current `dev` branch and create a descriptively named branch.
 2. Keep one topic per commit where practical.
-3. Run the relevant local test suites before pushing.
+3. Run `bash scripts/run-tests.sh` before pushing. GitHub runs the same
+   checks on every pull request; do not merge while they fail. Its summary
+   page shows the same plain-English report. Give each new test class a
+   one-line docstring saying what it proves, because the report uses it.
 4. Document inputs, outputs, limitations, and observed results.
 5. Open a pull request into `dev` for weekly work. Periodic reviewed
    checkpoints merge `dev` into `main`.

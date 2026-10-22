@@ -28,6 +28,7 @@ Typical experiment flow:
 
 | Area | Entry point | Responsibility |
 | --- | --- | --- |
+| Local checks | `scripts/run-tests.sh` | Runs every week's unit tests and syntax-checks tracked shell scripts, then prints a plain-English GREEN/RED report (`scripts/check_report.py`); also run by GitHub Actions on pushes and pull requests. |
 | Cluster inspection | `scripts/preflight.sh` | Read-only inspection of OS, disks, Hadoop footprint, security services, DNS, and ports before installation work. |
 | Cluster provisioning | `week-02/hadoop-poc-rhel9.sh` | Guarded fresh-node Hadoop installation; not an upgrade or recovery script. |
 | Cluster verification | `week-02/scripts/verify-cluster.sh` | Checks three HDFS/YARN workers, replication, readback, and a MapReduce acceptance job. |
@@ -61,6 +62,7 @@ Typical experiment flow:
 ## Where to go next
 
 - New reader: start with the root `README.md`, then select a weekly README.
+  Keep the [glossary](GLOSSARY.md) open for unfamiliar terms.
 - Cluster operator: read `week-02/docs/cluster-setup.md` and the safety notes first.
 - Algorithm reader: use Weeks 3-5 and their tests as executable examples.
 - Results reviewer: use each weekly `Results` and `Runtime` section; generated

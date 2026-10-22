@@ -30,6 +30,8 @@ validate_storage
 
 
 class InstallerGuards(unittest.TestCase):
+    """The Hadoop installer refuses unsafe disks and never overwrites existing data."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix="hadoop-guards-")
         self.addCleanup(self.tmp.cleanup)

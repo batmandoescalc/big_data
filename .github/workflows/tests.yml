@@ -1,0 +1,30 @@
+# Runs the local test suites on every push and pull request to dev and main,
+# so a reviewer can see a green or red check before reading the diff. The
+# check's summary page shows a plain-English report of what was tested.
+# No cluster access, credentials, or datasets are used.
+name: Local tests
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.9 matches the RHEL 9 cluster's system Python; 3.12 is a current release.
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run unit tests and shell syntax checks
+        run: bash scripts/run-tests.sh
