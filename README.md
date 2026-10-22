@@ -22,16 +22,20 @@ You do not need cluster access to read the study or run its unit tests.
    the core test suites.
 2. Clone the repository and enter its directory.
 3. Read the [repository guide](docs/REPOSITORY_GUIDE.md) to choose a topic.
-4. Run the local validation suites from the repository root:
+   Unfamiliar terms are defined in the [glossary](docs/GLOSSARY.md).
+4. Run every local check from the repository root:
 
    ```bash
-   python3 -m unittest discover -s week-02/tests -v
-   python3 -m unittest discover -s week-03/tests -v
-   python3 -m unittest discover -s week-04/tests -v
-   python3 -m unittest discover -s week-05/tests -v
+   bash scripts/run-tests.sh
    ```
 
-The tests use small fixtures and do not contact the university machines. Run
+   This discovers each `week-*/tests` suite and syntax-checks the tracked shell
+   scripts. To run one week alone, use
+   `python3 -m unittest discover -s week-04/tests -v`.
+
+The tests use small fixtures and do not contact the university machines. The
+same checks run automatically on GitHub for every push and pull request to
+`dev` and `main`, under Python 3.9 (the cluster's version) and 3.12. Run
 the full suite on Linux, macOS, or WSL because the installer-guard tests use
 Unix account and filesystem features that native Windows Python does not have.
 Cluster commands require authorized university access and an already
