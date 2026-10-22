@@ -20,7 +20,6 @@ to work. For the full cross-week index of scripts and results, see the
 | ResourceManager | Controller service that accepts jobs and allocates containers across the workers. | 2 |
 | NodeManager | Worker service that launches and monitors containers on its machine. | 2 |
 | Container | A bounded slice of a worker's CPU and memory in which one map or reduce task runs. | 2-4 |
-| Data locality | Scheduling a task on the worker that already holds its input block, so code moves to the data instead of data moving to the code. | 1 |
 
 ## MapReduce
 
@@ -29,7 +28,7 @@ to work. For the full cross-week index of scripts and results, see the
 | Mapper | Reads input records and emits key-value pairs, for example `(word, 1)`. | 2 |
 | Shuffle and sort | The framework step that moves every pair with the same key to the same reducer, sorted by key. Usually the most expensive network step. | 1-2 |
 | Reducer | Receives one key with all of its values and produces the final output for that key, for example a sum. | 2 |
-| Combiner | Optional local reducer run on mapper output before the shuffle to shrink network traffic. Not used in the first word count. | 1-2 |
+| Combiner | Optional local reducer run on mapper output before the shuffle to shrink network traffic. Not used in the first word count; Week 5's one-job join uses one to pre-sum counts. | 1-2, 5 |
 | Hadoop Streaming | Lets mappers and reducers be any program that reads stdin and writes stdout, which is how this study uses Python. | 2 |
 | Reduce-side join | Both relations are tagged and shuffled by the join key; the reducer matches them. Needs buffering because value order is not guaranteed. | 3 |
 | Map-side (replicated) join | A small table is copied to every mapper and joined in memory, so no reducer buffer or extra shuffle is needed. | 5 |
