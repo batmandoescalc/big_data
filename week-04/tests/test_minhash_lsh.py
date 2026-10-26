@@ -28,6 +28,8 @@ def run(script, text, *args):
 
 
 class ShingleTests(unittest.TestCase):
+    """Text is cut into overlapping word chunks (shingles) the same way every time."""
+
     def test_empty_input_has_no_shingles(self):
         self.assertEqual(shingle.words(""), [])
         self.assertEqual(shingle.word_shingles([], 3), set())
@@ -66,6 +68,8 @@ class ShingleTests(unittest.TestCase):
 
 
 class MinhashTests(unittest.TestCase):
+    """Minhash signatures estimate how similar two texts are, close to the true value."""
+
     params = minhash.hash_params(200, seed=7)
 
     def test_identical_sets_give_identical_signatures(self):
@@ -106,6 +110,8 @@ class MinhashTests(unittest.TestCase):
 
 
 class BandingTests(unittest.TestCase):
+    """LSH banding flags the right pairs of passages as possible near-duplicates."""
+
     # Hand-built 4-row signatures, b = 2 bands of r = 2 rows.
     toy = {
         "A": [1, 2, 3, 4],
@@ -132,6 +138,8 @@ class BandingTests(unittest.TestCase):
 
 
 class HadoopTests(unittest.TestCase):
+    """The Hadoop version of LSH finds exactly the same pairs as the local version."""
+
     signatures = "".join(f"{k}\t{' '.join(map(str, v))}\n" for k, v in BandingTests.toy.items())
 
     def pipeline(self, shuffle_seed):

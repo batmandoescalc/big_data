@@ -24,6 +24,8 @@ def wordcount(text):
 
 
 class WordCountTests(unittest.TestCase):
+    """Word count gives the right totals on small texts we checked by hand."""
+
     def test_known_counts_across_lines_and_final_group(self):
         self.assertEqual(wordcount("Houston, HOUSTON!\nEagle.\n"),
                          "eagle\t1\nhouston\t2\n")
