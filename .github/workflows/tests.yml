@@ -15,12 +15,18 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # 3.9 matches the RHEL 9 cluster's system Python; 3.12 is a current release.
-        python-version: ["3.9", "3.12"]
+        # Python 3.9 matches the RHEL 9 cluster, but GitHub's Ubuntu 26.04
+        # image no longer provides it. Pin that compatibility job to 24.04;
+        # retain ubuntu-latest for the current Python check.
+        include:
+          - os: ubuntu-24.04
+            python-version: "3.9"
+          - os: ubuntu-latest
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6

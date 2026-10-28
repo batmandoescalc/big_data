@@ -7,12 +7,10 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-The midsemester checkpoint organizes the work completed in Weeks 1-5. The
-cluster, algorithms, experiments, and evidence are unchanged; the focus is
-making them understandable and reproducible for a new reader. Start with the
+Week 7 adds local, reproducible Chapter 4 streaming-algorithm experiments and
+a bounded Hadoop Flajolet--Martin design. Start with the
 [repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
-functions and results, or the [Week 6 checkpoint](week-06/README.md) for the
-Git and documentation audit.
+functions and results, or [Week 7](week-07/README.md) for the newest work.
 
 ## Getting started
 
@@ -75,6 +73,8 @@ See [the current status](week-02/docs/STATUS.md).
   Wikipedia scaling, SQLite/Hadoop comparison, and a Spark estimate.
 - [Week 6](week-06/README.md): midsemester organization, branch reconciliation,
   newcomer documentation, and the `dev`-to-`main` checkpoint.
+- [Week 7](week-07/README.md): Bloom filters, Flajolet--Martin, AMS, DGIM,
+  bounded-stream verification, Hadoop merge design, and cluster safety.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
