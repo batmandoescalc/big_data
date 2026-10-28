@@ -12,6 +12,7 @@ import hashlib
 import math
 import random
 from collections import Counter, deque
+from typing import Optional, Union
 
 
 def stable_hash(value: object, seed: int = 0) -> int:
@@ -143,7 +144,7 @@ class DGIM:
         # Each item is (bucket_size, timestamp_of_newest_bit), newest first.
         self.buckets: deque[tuple[int, int]] = deque()
 
-    def add(self, bit: int | bool) -> None:
+    def add(self, bit: Union[int, bool]) -> None:
         """Process one binary event and compact old buckets as DGIM requires."""
         if bit not in (0, 1, False, True):
             raise ValueError("DGIM accepts only 0 or 1")
@@ -179,7 +180,7 @@ class DGIM:
         while self.buckets and self.buckets[-1][1] <= cutoff:
             self.buckets.pop()
 
-    def estimate(self, last: int | None = None) -> float:
+    def estimate(self, last: Optional[int] = None) -> float:
         """Estimate one-bits in the latest ``last`` events (default full window)."""
         if last is None:
             last = self.window
