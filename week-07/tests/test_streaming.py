@@ -2,6 +2,8 @@
 
 from pathlib import Path
 import sys
+import json
+import subprocess
 import unittest
 
 
@@ -97,6 +99,31 @@ class GeneratorTests(unittest.TestCase):
         second = list(generate_events(3, 5, 5, 0.1, 8))
         self.assertEqual(first, second)
         self.assertEqual([event["sequence"] for event in first], [1, 2, 3])
+
+
+class HadoopFMTests(unittest.TestCase):
+    """The map-side FM summaries merge exactly as the single-process registers do."""
+
+    HADOOP = SCRIPTS / "hadoop"
+
+    def test_mapper_reducer_matches_single_process_registers(self):
+        events = list(generate_events(12, 7, 3, 0.0, 22))
+        payload = "".join(json.dumps(event) + "\n" for event in events)
+        mapper = subprocess.run([sys.executable, str(self.HADOOP / "fm_mapper.py"), "16"],
+                                input=payload, text=True, encoding="utf-8",
+                                capture_output=True, check=True)
+        reducer = subprocess.run([sys.executable, str(self.HADOOP / "fm_reducer.py")],
+                                 input="".join(sorted(mapper.stdout.splitlines(True))), text=True,
+                                 encoding="utf-8", capture_output=True, check=True)
+        whole = FlajoletMartin(16)
+        for event in events:
+            whole.add(event["user_id"])
+        self.assertEqual([int(line.split("\t")[1]) for line in reducer.stdout.splitlines()],
+                         whole.registers)
+
+    def test_hadoop_launcher_refuses_existing_output(self):
+        launcher = (self.HADOOP / "run-fm-hadoop.sh").read_text(encoding="utf-8")
+        self.assertIn("Refusing to overwrite existing HDFS output", launcher)
 
 
 if __name__ == "__main__":
