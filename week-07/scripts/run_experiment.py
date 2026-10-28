@@ -96,7 +96,7 @@ def main():
     parser.add_argument("--skewed", action="store_true")
     parser.add_argument("--window", type=int, default=1_024)
     parser.add_argument("--registers", type=int, default=128)
-    parser.add_argument("--estimators", type=int, default=512)
+    parser.add_argument("--estimators", type=int, default=64)
     parser.add_argument("--bloom-bits", type=int, default=131_072)
     parser.add_argument("--bloom-hashes", type=int, default=5)
     parser.add_argument("--output", type=Path, required=True)

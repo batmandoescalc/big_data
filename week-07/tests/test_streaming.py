@@ -118,8 +118,9 @@ class HadoopFMTests(unittest.TestCase):
         whole = FlajoletMartin(16)
         for event in events:
             whole.add(event["user_id"])
-        self.assertEqual([int(line.split("\t")[1]) for line in reducer.stdout.splitlines()],
-                         whole.registers)
+        reduced = {int(line.split("\t")[0]): int(line.split("\t")[1])
+                   for line in reducer.stdout.splitlines()}
+        self.assertEqual(reduced, dict(enumerate(whole.registers)))
 
     def test_hadoop_launcher_refuses_existing_output(self):
         launcher = (self.HADOOP / "run-fm-hadoop.sh").read_text(encoding="utf-8")
