@@ -94,6 +94,17 @@ The launcher refuses to overwrite existing output.  It must be run only after
 the health checks below.  No Hadoop configuration, provisioning script, or
 existing HDFS dataset is modified by this work.
 
+### Live-cluster status
+
+On October 28, 2026, the read-only health check found three running YARN
+workers, no active applications, no missing or corrupt HDFS blocks, and ample
+free HDFS capacity. The attempted upload was correctly refused because the
+student account has no writable HDFS home or shared scratch directory. No
+MapReduce job was submitted. The only access needed for the future live
+demonstration is one student-writable HDFS directory beneath an
+instructor-approved project area; we will not bypass the permission model with
+`sudo` or the Hadoop service account.
+
 ## Sharing the cluster safely
 
 Before a live submission, check the cluster and coordinate with the other
@@ -128,8 +139,8 @@ it cannot protect the machine from arbitrary privileged or direct processes.
 - Synthetic events establish known truth but are not real user behavior.
 - These teaching implementations prioritize clarity over state-of-the-art
   estimators and production throughput.
-- The reported run is local; a live cluster result remains a separate,
-  authorized step.
+- The reported algorithm result is local. The cluster was healthy at the
+  read-only check, but the live run awaits a student-writable HDFS directory.
 - Hadoop micro-batches incur startup overhead.  If low-latency continuous
   processing becomes a goal, evaluate a streaming-oriented system separately
   rather than describing MapReduce as real-time.
