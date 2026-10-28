@@ -27,6 +27,12 @@ The representative 10,000-event run records:
 - DGIM: 46 vs. 35 recent error events (31.43% error; documented as a
   rare-event approximation limitation)
 
+A nine-run size check (three seeds each at 10,000, 25,000, and 50,000 events)
+adds a reproducible memory chart. The exact distinct-user set grew from about
+84 KiB to 780 KiB; the deliberately small FM and AMS summaries remained 32 B
+and 512 B respectively. Their reported errors make the accuracy/memory trade-
+off explicit.
+
 ## Scope and limitations
 
 - No Hadoop provisioning, configuration, HDFS data, or existing results were

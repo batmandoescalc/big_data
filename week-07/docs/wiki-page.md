@@ -29,6 +29,15 @@ estimated 46 recent error events where the exact count was 35; that larger
 percentage error is expected for a rare-event approximate sliding-window
 question and must be reported honestly.
 
+## Repeated size check
+
+Three deterministic seeds were run at 10,000, 25,000, and 50,000 events.
+With a deliberately small 32-register FM sketch and 32 AMS estimators, the
+exact distinct-user set grew from about 84 KiB to 780 KiB while FM remained at
+32 bytes and AMS at 512 bytes. Median FM error ranged from 2.45% to 11.47%; it
+is the visible trade-off for retaining a tiny, fixed summary. The accompanying
+chart is in `week-07/docs/memory-growth.svg`.
+
 ## Hadoop finding
 
 Hadoop MapReduce is a batch system, not a real-time streaming system.  The

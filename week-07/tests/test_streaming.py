@@ -15,6 +15,7 @@ from streaming import (  # noqa: E402
     AMSSecondMoment, BloomFilter, DGIM, FlajoletMartin, exact_recent_ones,
     exact_second_moment,
 )
+from benchmark_sizes import run_once, summarize  # noqa: E402
 
 
 class BloomTests(unittest.TestCase):
@@ -125,6 +126,15 @@ class HadoopFMTests(unittest.TestCase):
     def test_hadoop_launcher_refuses_existing_output(self):
         launcher = (self.HADOOP / "run-fm-hadoop.sh").read_text(encoding="utf-8")
         self.assertIn("Refusing to overwrite existing HDFS output", launcher)
+
+
+class RepeatedBenchmarkTests(unittest.TestCase):
+    """Repeated stream summaries retain fixed sketches while exact state grows."""
+
+    def test_summary_has_one_row_per_size_and_fixed_fm_memory(self):
+        summary = summarize([run_once(100, 1, users=50), run_once(200, 2, users=50)])
+        self.assertEqual([row["events"] for row in summary], [100, 200])
+        self.assertEqual([row["fm_bytes"] for row in summary], [128, 128])
 
 
 if __name__ == "__main__":

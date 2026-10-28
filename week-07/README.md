@@ -64,6 +64,39 @@ absolute difference of 11 events is within the method's intended rough
 approximation.  A later run should repeat seeds and report a range, rather
 than treating one generated stream as a universal accuracy claim.
 
+### Repeated size experiment
+
+To check that a favorable single seed was not being overinterpreted, we ran
+three seeds at each size. This faster comparison uses 32 FM registers and 32
+AMS estimators (rather than the 128/64 configuration above); its purpose is
+to show the memory trade-off, not to claim the most accurate configuration.
+The event generator increases the possible user population with stream size,
+so an exact distinct-user set has to retain more information.
+
+![Logical memory versus stream size](docs/memory-growth.svg)
+
+| Events | Runs | Median local time | Exact set | Bloom | FM | AMS | Median FM error | Median AMS error |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 10,000 | 3 | 0.872 s | 83,984 B | 16,384 B | 32 B | 512 B | 3.53% | 10.48% |
+| 25,000 | 3 | 2.108 s | 258,788 B | 16,384 B | 32 B | 512 B | 2.45% | 2.58% |
+| 50,000 | 3 | 4.567 s | 779,504 B | 16,384 B | 32 B | 512 B | 11.47% | 0.46% |
+
+The exact-set column is a conservative logical estimate, not a complete
+measurement of CPython allocator overhead. Even so, it grows nearly tenfold
+as the distinct population grows, while the configured sketches do not. The
+FM error changes by size because a 32-register sketch is intentionally small;
+the point is the accuracy-versus-memory trade-off, not that a fixed error is
+guaranteed.
+
+Reproduce the comparison:
+
+```bash
+python3 week-07/scripts/benchmark_sizes.py \
+  --sizes 10000,25000,50000 --seeds 4099,4100,4101 \
+  --output runtime/week-07/benchmark.json \
+  --chart week-07/docs/memory-growth.svg
+```
+
 ## Hadoop deployment: bounded batch, not real-time streaming
 
 Hadoop MapReduce is designed for bounded batches.  It is not a continuously
@@ -141,6 +174,8 @@ it cannot protect the machine from arbitrary privileged or direct processes.
   estimators and production throughput.
 - The reported algorithm result is local. The cluster was healthy at the
   read-only check, but the live run awaits a student-writable HDFS directory.
+- Repeated local timing measures this workstation only; it is not a Hadoop
+  throughput or scalability claim.
 - Hadoop micro-batches incur startup overhead.  If low-latency continuous
   processing becomes a goal, evaluate a streaming-oriented system separately
   rather than describing MapReduce as real-time.
