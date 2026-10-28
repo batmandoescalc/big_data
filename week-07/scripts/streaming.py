@@ -75,12 +75,14 @@ class FlajoletMartin:
                 self.registers[seed] = observed
 
     def estimate(self) -> float:
-        """Return a median-of-registers estimate of the distinct count."""
-        estimates = sorted(2.0 ** register / self.PHI for register in self.registers)
-        middle = len(estimates) // 2
-        if len(estimates) % 2:
-            return estimates[middle]
-        return (estimates[middle - 1] + estimates[middle]) / 2
+        """Return a harmonic aggregate of independently corrected FM estimates.
+
+        A simple arithmetic mean lets a rare long run of zero hash bits
+        dominate the answer.  The harmonic aggregate retains the classic FM
+        register observation but is much less sensitive to that heavy tail.
+        """
+        estimates = [2.0 ** register / self.PHI for register in self.registers]
+        return len(estimates) / sum(1.0 / estimate for estimate in estimates)
 
     def merge(self, other: "FlajoletMartin") -> "FlajoletMartin":
         """Merge a compatible mapper summary by retaining each register maximum."""
