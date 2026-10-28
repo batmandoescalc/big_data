@@ -1,0 +1,103 @@
+"""Streaming sketches stay bounded and give defensible estimates on known streams."""
+
+from pathlib import Path
+import sys
+import unittest
+
+
+SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+
+from event_generator import generate_events  # noqa: E402
+from streaming import (  # noqa: E402
+    AMSSecondMoment, BloomFilter, DGIM, FlajoletMartin, exact_recent_ones,
+    exact_second_moment,
+)
+
+
+class BloomTests(unittest.TestCase):
+    """Bloom filters retain every inserted value while using a fixed bit array."""
+
+    def test_inserted_values_are_never_false_negatives(self):
+        filter_ = BloomFilter(bits=256, hashes=4)
+        values = ["Eagle", "Tranquility", "Houstøn", "α"]
+        for value in values:
+            filter_.add(value)
+        self.assertTrue(all(value in filter_ for value in values))
+        self.assertEqual(filter_.memory_bytes, 32)
+
+    def test_invalid_shape_is_rejected(self):
+        with self.assertRaises(ValueError):
+            BloomFilter(0, 1)
+
+
+class FlajoletMartinTests(unittest.TestCase):
+    """FM registers merge by maximum and estimate distinct values without a set."""
+
+    def test_merge_matches_single_stream_registers(self):
+        values = [f"user-{index % 73}" for index in range(500)]
+        whole = FlajoletMartin(32)
+        left = FlajoletMartin(32)
+        right = FlajoletMartin(32)
+        for value in values:
+            whole.add(value)
+        for value in values[:250]:
+            left.add(value)
+        for value in values[250:]:
+            right.add(value)
+        self.assertEqual(whole.registers, left.merge(right).registers)
+        self.assertGreater(whole.estimate(), 20)
+        self.assertLess(whole.estimate(), 200)
+
+    def test_incompatible_merges_fail(self):
+        with self.assertRaises(ValueError):
+            FlajoletMartin(4).merge(FlajoletMartin(5))
+
+
+class AMSTests(unittest.TestCase):
+    """AMS distinguishes uniform from concentrated frequency distributions."""
+
+    def test_skew_has_larger_second_moment_and_estimate(self):
+        uniform = [f"v-{index % 20}" for index in range(1_000)]
+        skewed = ["hot"] * 900 + [f"cold-{index}" for index in range(100)]
+        self.assertGreater(exact_second_moment(skewed), exact_second_moment(uniform))
+        first, second = AMSSecondMoment(512, 5), AMSSecondMoment(512, 5)
+        for value in uniform:
+            first.add(value)
+        for value in skewed:
+            second.add(value)
+        self.assertGreater(second.estimate(), first.estimate())
+
+    def test_empty_estimate_is_zero(self):
+        self.assertEqual(AMSSecondMoment().estimate(), 0.0)
+
+
+class DGIMTests(unittest.TestCase):
+    """DGIM keeps a logarithmic bucket summary of recent binary events."""
+
+    def test_count_is_reasonable_and_bounded(self):
+        bits = [index % 3 == 0 for index in range(1, 301)]
+        sketch = DGIM(128)
+        for bit in bits:
+            sketch.add(bit)
+        exact = exact_recent_ones(bits, 128)
+        self.assertLessEqual(abs(sketch.estimate() - exact), exact / 2 + 2)
+        self.assertLess(sketch.memory_bytes, 16 * 30)
+
+    def test_nonbinary_input_fails(self):
+        with self.assertRaises(ValueError):
+            DGIM(10).add(2)
+
+
+class GeneratorTests(unittest.TestCase):
+    """Generated streams are repeatable and produced one event at a time."""
+
+    def test_fixed_seed_repeats_and_sequence_is_contiguous(self):
+        first = list(generate_events(3, 5, 5, 0.1, 8))
+        second = list(generate_events(3, 5, 5, 0.1, 8))
+        self.assertEqual(first, second)
+        self.assertEqual([event["sequence"] for event in first], [1, 2, 3])
+
+
+if __name__ == "__main__":
+    unittest.main()
