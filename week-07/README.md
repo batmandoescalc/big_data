@@ -135,8 +135,10 @@ free HDFS capacity. The attempted upload was correctly refused because the
 student account has no writable HDFS home or shared scratch directory. No
 MapReduce job was submitted. The only access needed for the future live
 demonstration is one student-writable HDFS directory beneath an
-instructor-approved project area; we will not bypass the permission model with
-`sudo` or the Hadoop service account.
+administrator-approved project area. Matt did not create the HDFS permission
+model and is not assumed to control it. We need to identify or contact the
+cluster/HDFS administrator for this request; we will not bypass the permission
+model with `sudo` or the Hadoop service account.
 
 ## Sharing the cluster safely
 

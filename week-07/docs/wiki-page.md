@@ -59,8 +59,10 @@ On October 28, the read-only health check found three running workers, no
 active applications, and no missing or corrupt HDFS blocks. The student
 account did not have a writable HDFS input directory, so the upload was
 correctly refused and no job was submitted. The next safe step is to obtain a
-student-owned HDFS project directory; we will not bypass permissions with the
-Hadoop service account.
+student-owned HDFS project directory from the cluster/HDFS administrator. Matt
+did not create or control this permission model, so the administrator must be
+identified or contacted; we will not bypass permissions with the Hadoop
+service account.
 
 See the repository [Week 7 README](../week-07/README.md) for commands, test
 coverage, limitations, and reproduction details.

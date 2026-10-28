@@ -41,7 +41,8 @@ off explicit.
   health check found three workers running, no active applications, and no
   missing/corrupt HDFS blocks; the upload was correctly refused because the
   student account has no writable HDFS directory. No job was submitted and the
-  next safe step is an instructor-approved student-owned HDFS directory.
+next safe step is a student-owned HDFS directory created by the cluster/HDFS
+administrator. Matt did not create or control the HDFS permission model.
 - Generated run outputs remain ignored; no private hostnames, credentials,
   keys, logs, or datasets are committed.
 - The local Wiki clone is currently missing its tracked content, so this PR
