@@ -107,7 +107,7 @@ class HadoopFMTests(unittest.TestCase):
 
     HADOOP = SCRIPTS / "hadoop"
 
-    def test_mapper_reducer_matches_single_process_registers(self):
+    def test_mapper_computes_trailing_zeros_and_reducer_merges_registers(self):
         events = list(generate_events(12, 7, 3, 0.0, 22))
         payload = "".join(json.dumps(event) + "\n" for event in events)
         mapper = subprocess.run([sys.executable, str(self.HADOOP / "fm_mapper.py"), "16"],
@@ -123,6 +123,13 @@ class HadoopFMTests(unittest.TestCase):
                    for line in reducer.stdout.splitlines()}
         self.assertEqual(reduced, dict(enumerate(whole.registers)))
 
+    def test_reducer_only_takes_mapper_maxima(self):
+        mapper_summaries = "0\t2\n0\t5\n1\t3\n1\t1\n"
+        reducer = subprocess.run([sys.executable, str(self.HADOOP / "fm_reducer.py")],
+                                 input=mapper_summaries, text=True, encoding="utf-8",
+                                 capture_output=True, check=True)
+        self.assertEqual(reducer.stdout, "0\t5\n1\t3\n")
+
     def test_hadoop_launcher_refuses_existing_output(self):
         launcher = (self.HADOOP / "run-fm-hadoop.sh").read_text(encoding="utf-8")
         self.assertIn("Refusing to overwrite existing HDFS output", launcher)
@@ -135,6 +142,34 @@ class RepeatedBenchmarkTests(unittest.TestCase):
         summary = summarize([run_once(100, 1, users=50), run_once(200, 2, users=50)])
         self.assertEqual([row["events"] for row in summary], [100, 200])
         self.assertEqual([row["fm_bytes"] for row in summary], [128, 128])
+
+
+class DocumentedStreamTests(unittest.TestCase):
+    """The published eight-event example reproduces every documented result."""
+
+    def test_all_four_sketches_on_documented_stream(self):
+        users = ["alice", "bob", "alice", "carol", "bob", "alice", "dana", "alice"]
+        errors = [0, 1, 0, 0, 1, 1, 0, 1]
+        bloom = BloomFilter(256, 4)
+        fm = FlajoletMartin(16)
+        ams = AMSSecondMoment(64, 4099)
+        dgim = DGIM(8)
+        for user, error in zip(users, errors):
+            bloom.add(user)
+            fm.add(user)
+            ams.add(user)
+            dgim.add(error)
+
+        self.assertTrue(all(user in bloom for user in set(users)))
+        self.assertEqual(fm.registers, [2, 4, 3, 1, 1, 4, 1, 4,
+                                        1, 1, 2, 2, 2, 2, 2, 1])
+        self.assertAlmostEqual(fm.estimate(), 4.298167217845049)
+        self.assertEqual(exact_second_moment(users), 22)
+        self.assertEqual(ams.estimate(), 22.75)
+        self.assertEqual(sum(errors), 4)
+        self.assertEqual(dgim.estimate(), 4.0)
+        self.assertEqual((bloom.memory_bytes, fm.memory_bytes,
+                          ams.memory_bytes, dgim.memory_bytes), (32, 16, 1024, 48))
 
 
 if __name__ == "__main__":

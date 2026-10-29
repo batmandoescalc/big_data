@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Merge mapper register maxima and emit one distributed FM summary."""
+"""Merge mapper-computed FM registers; no hashing happens in this reducer."""
 
 from __future__ import annotations
 
@@ -7,7 +7,12 @@ import sys
 
 
 def main():
-    """Hadoop groups values by register; retain its maximum as the merge rule."""
+    """For each register, retain the maximum reported by any mapper.
+
+    The mapper has already hashed every user and counted trailing zeros.  FM's
+    distributed merge rule is simply ``max`` for the same register across
+    partitions, so this reducer never needs the original user IDs.
+    """
     current, maximum = None, None
     for line in sys.stdin:
         register, value = line.rstrip("\n").split("\t", 1)
