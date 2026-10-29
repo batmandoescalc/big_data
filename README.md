@@ -74,7 +74,10 @@ See [the current status](week-02/docs/STATUS.md).
 - [Week 6](week-06/README.md): midsemester organization, branch reconciliation,
   newcomer documentation, and the `dev`-to-`main` checkpoint.
 - [Week 7](week-07/README.md): Bloom filters, Flajolet--Martin, AMS, DGIM,
-  bounded-stream verification, Hadoop merge design, and cluster safety.
+  bounded-stream verification, Hadoop merge design, and cluster safety. FM was
+  chosen for Hadoop because partition-local trailing-zero registers merge
+  exactly with a small, associative `max` operation; AMS and DGIM require
+  global sampling or ordering that basic MapReduce does not preserve.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`

@@ -20,6 +20,10 @@ approximation.
 All four operate one event at a time.  Each is tested against an exact answer
 on a deterministic JSON-line click stream.
 
+An additional eight-event example lists every user/status record and checks
+all four outputs by hand: four distinct users, second moment 22, and four error
+bits. FM estimates 4.298, AMS estimates 22.75, and DGIM returns 4.
+
 ## Main result
 
 On a 10,000-event, 1,000-user stream, FM estimated 1,015.6 distinct users
@@ -40,12 +44,19 @@ chart is in `week-07/docs/memory-growth.svg`.
 
 ## Hadoop finding
 
-Hadoop MapReduce is a batch system, not a real-time streaming system.  The
-Hadoop prototype therefore distributes a bounded FM batch: mappers compute
-register maxima, and a reducer takes the maximum for each register.  This
+Hadoop MapReduce is a batch system, not a real-time streaming system. The
+Hadoop prototype therefore distributes a bounded FM batch: mappers hash users,
+count trailing zeros, and emit partition-local register maxima; the reducer
+only takes the maximum for each register across mappers. This
 merge rule exactly reproduces the register state from a single-process run.
 Bloom filters are also easy to merge with bitwise OR; AMS and DGIM need more
 care at distributed batch boundaries.
+
+FM was selected because its fixed register arrays merge exactly with an
+associative `max`, producing a useful numeric distinct-count estimate with
+very little shuffle data. AMS needs coordinated global sampling, and DGIM
+needs event ordering/window boundaries that ordinary MapReduce partitions do
+not preserve.
 
 ## Cluster safety
 
@@ -54,6 +65,16 @@ use unique HDFS paths and small resource requests.  We will not intentionally
 crash a VM.  The real risks are unbounded direct processes, exhausted disks,
 and too many containers.  A bounded YARN job is the safe way to observe
 resource isolation.
+
+Concretely, a VM can become unavailable if an unbounded process exhausts its
+8 GB of RAM and triggers Linux's out-of-memory killer, if logs/temporary files
+fill the root filesystem, if HDFS fills worker data disks, or if too many
+processes/file descriptors prevent Hadoop daemons from operating. CPU
+saturation usually causes slowness/timeouts rather than a crash. Loss of the
+controller's NameNode or ResourceManager has cluster-wide impact. YARN limits
+help inside containers but do not protect against direct processes or full
+filesystems, so the safe experiment monitors memory, disk, containers, and
+daemon health around a bounded job rather than intentionally crashing a VM.
 
 On October 28, the read-only health check found three running workers, no
 active applications, and no missing or corrupt HDFS blocks. The student

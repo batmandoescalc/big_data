@@ -64,6 +64,11 @@ absolute difference of 11 events is within the method's intended rough
 approximation.  A later run should repeat seeds and report a range, rather
 than treating one generated stream as a universal accuracy claim.
 
+For a result small enough to verify by hand, see the
+[eight-event tested stream](docs/tested-stream.md). It lists every input event,
+the exact distinct count, exact second moment, exact recent-error count, all
+four sketch results, and the FM register array used by the Hadoop test.
+
 ### Repeated size experiment
 
 To check that a favorable single seed was not being overinterpreted, we ran
@@ -103,17 +108,32 @@ Hadoop MapReduce is designed for bounded batches.  It is not a continuously
 running event processor.  We therefore implement only a safe *bounded batch
 simulation* of FM on Hadoop:
 
-1. Each mapper reads JSON-line events and produces its 128 FM register maxima.
-2. Hadoop groups records by register number.
-3. The reducer takes the maximum for each register.
-4. The merged register array is exactly the same as a single process would
-   produce over the same data; `HadoopFMTests` proves this locally.
+1. Each mapper reads JSON-line events. For every user and every register,
+   `FlajoletMartin.add` hashes the user, counts the hash's trailing zero bits,
+   and retains that partition's maximum observation.
+2. Each mapper emits only its 128 register maxima, not the original events.
+3. Hadoop groups mapper summaries by register number.
+4. The reducer takes the maximum mapper value for each register. It does not
+   hash users or count trailing zeros again.
+5. The merged register array is exactly the same as a single process would
+   produce over the same data; `HadoopFMTests` proves both roles independently.
 
-FM works well here because maxima merge associatively.  Bloom filters can also
-merge with a bitwise OR when their settings match.  AMS requires a carefully
-defined shared sampling design.  DGIM needs special treatment at batch
-boundaries because it depends on event order and time windows.  That is why
-we do not claim that all four are equally easy Hadoop jobs.
+### Why Flajolet--Martin was selected
+
+FM is the cleanest first Hadoop example because every input partition can be
+summarized independently and compatible register arrays merge exactly with
+the associative and commutative `max` operation. Only a fixed number of small
+records crosses the mapper/reducer boundary, and the result is a useful
+numeric estimate that can be checked against an exact distinct count.
+
+A Bloom filter is also mergeable (bitwise OR when every mapper uses identical
+settings), but its answer is a membership test rather than a numeric stream
+statistic. AMS needs a coordinated distributed sampling design so that mapper
+samples have the correct global probability. DGIM depends on global event
+order and window boundaries, which ordinary unordered MapReduce partitions do
+not preserve. FM therefore demonstrates the Chapter 4-to-Hadoop connection
+with the fewest unrelated complications; it was not selected because it is
+universally the best streaming algorithm.
 
 On an authorized controller, after copying only the three Hadoop scripts to a
 temporary task directory, use a unique HDFS output directory:
@@ -161,13 +181,34 @@ hdfs dfsadmin -report
 
 ### What can make a VM unhealthy?
 
-The likely risks are exhausting RAM outside YARN, filling a disk or log
-filesystem, launching too many containers, or writing code that accidentally
-stores the whole stream.  The appropriate safety test is **not** to crash a
-VM.  Instead, submit a tiny bounded YARN job, confirm its container limits in
-the application report, inspect its logs, and verify afterward that all three
-workers remain healthy.  YARN normally isolates a misbehaving container, but
-it cannot protect the machine from arbitrary privileged or direct processes.
+The four VMs each have four virtual CPUs and 8 GB of RAM. A bounded FM job with
+128 tiny registers is not close to bringing one down. The concrete failure
+modes are:
+
+| Resource failure | What can cause it | Likely consequence |
+| --- | --- | --- |
+| Physical RAM exhausted | An unbounded Python list/dictionary, a direct process outside YARN, or aggregate container allocations larger than available RAM | Linux invokes the out-of-memory killer. It may terminate the application or a Hadoop daemon, making that node unavailable until the process/service recovers. |
+| Root/system filesystem full | Unbounded logs, temporary files, or copied datasets written outside the Hadoop data disk | Daemons cannot write logs, PID files, or temporary state and may stop or fail to restart. |
+| Hadoop data disk full | Too many HDFS blocks or outputs retained without capacity planning | That DataNode stops accepting new blocks; if several workers fill, cluster writes fail even if the operating systems stay up. |
+| CPU saturated | Too many simultaneous mapper/reducer processes or a tight loop | The VM becomes slow and health checks may time out, but CPU load alone is less likely to crash it than memory or disk exhaustion. |
+| Process/file-descriptor exhaustion | A program repeatedly starts children or opens files/sockets without closing them | New containers or services cannot start; existing daemons may become unresponsive. |
+| Controller service loss | Resource exhaustion or failure affects the NameNode or ResourceManager on the controller | Workers may still hold HDFS blocks, but namespace operations or new YARN scheduling stop cluster-wide. |
+
+YARN helps only when work runs inside correctly sized containers. It can kill
+an over-limit container, but it cannot protect a VM from a direct shell
+process, a full root filesystem, or unsafe administrator-level commands. The
+most plausible bug in our own streaming code would be retaining every event
+instead of a bounded sketch; the tests explicitly check fixed/logarithmic
+state to catch that design error.
+
+We can investigate without deliberately crashing anything: record `free -h`,
+`df -h`, active YARN applications/containers, and node health before and after
+a bounded job; then inspect the application report for container memory and
+exit status. If memory approaches exhaustion, swap activity appears, a disk
+approaches capacity, or a Hadoop daemon becomes unhealthy, stop only our own
+application and preserve the evidence. An intentional OOM, disk-fill, fork
+bomb, or daemon kill would risk shared work and is not necessary to answer the
+research question.
 
 ## Limitations and next step
 
