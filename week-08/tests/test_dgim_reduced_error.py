@@ -77,9 +77,9 @@ class HandCheckedTests(unittest.TestCase):
 
 
 class Week07EquivalenceTests(unittest.TestCase):
-    """With r=2 the buckets are exactly Week 7's; only the estimate rule differs."""
+    """With r=2 the buckets and estimates are exactly Week 7's DGIM."""
 
-    def test_r2_keeps_identical_buckets_to_week07(self):
+    def test_r2_keeps_identical_buckets_and_estimates_to_week07(self):
         rng = random.Random(7)
         for p in (0.1, 0.5, 0.9):
             old, new = WEEK07.DGIM(64), DGIMReduced(64, 2)
@@ -89,25 +89,34 @@ class Week07EquivalenceTests(unittest.TestCase):
                 new.add(bit)
                 self.assertEqual(list(old.buckets), new.buckets)
                 self.assertEqual(old.memory_bytes, new.memory_bytes)
+                for k in (1, 2, 7, 30, 63, 64):
+                    self.assertEqual(old.estimate(k), new.estimate(k))
 
-    def test_study_reproduces_week07_estimates(self):
-        rng = random.Random(8)
-        old, new = WEEK07.DGIM(64), DGIMReduced(64, 2)
-        for _ in range(1_000):
-            bit = rng.random() < 0.4
-            old.add(bit)
-            new.add(bit)
-            for k in (1, 7, 30, 64):
-                self.assertEqual(old.estimate(k),
-                                 dgim_study.week07_estimate(new.buckets, new.time, k))
-
-    def test_week07_rule_breaks_the_half_bound_where_the_book_rule_holds(self):
-        # Ones at t=1..8 with window 5: exact count is 5 (t=4..8).  Week 7
-        # counts the oldest bucket (size 4, only partly inside) in full.
+    def test_eight_ones_window_five_matches_the_book(self):
+        # Ones at t=1..8 with window 5: exact count is 5 (t=4..8).  The book
+        # rule halves the size-4 bucket that sticks out: 1 + 1 + 2 + 2 = 6.
         old = feed(WEEK07.DGIM(5), [1] * 8)
         new = feed(DGIMReduced(5, 2), [1] * 8)
-        self.assertEqual(old.estimate(), 8.0)   # 60% error, above the 50% bound
-        self.assertEqual(new.estimate(), 6.0)   # 20% error
+        self.assertEqual(new.estimate(), 6.0)
+        self.assertEqual(old.estimate(), 6.0)
+
+
+class Week7BeforeFixTests(unittest.TestCase):
+    """The frozen pre-fix Week 7 rule (commit 141deb1) gives its old answers."""
+
+    def test_old_rule_overcounted_eight_ones_window_five(self):
+        sketch = feed(DGIMReduced(5, 2), [1] * 8)
+        # Old rule: every in-range bucket in full, 1 + 1 + 2 + 4 = 8.
+        self.assertEqual(
+            dgim_study.week7_original_estimate(sketch.buckets, sketch.time, 5), 8.0)
+
+    def test_old_rule_added_half_of_an_expired_bucket(self):
+        # Ones at t=1 and t=2, then zeros; query the last 7 bits at t=8.
+        sketch = feed(DGIMReduced(8, 2), [1, 1, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(sketch.buckets, [(1, 2), (1, 1)])
+        self.assertEqual(
+            dgim_study.week7_original_estimate(sketch.buckets, sketch.time, 7), 1.5)
+        self.assertEqual(sketch.estimate(7), 0.5)  # exact 1
 
 
 class ErrorBoundTests(unittest.TestCase):

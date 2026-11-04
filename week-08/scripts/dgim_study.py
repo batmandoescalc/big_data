@@ -67,13 +67,14 @@ def query_lengths(window, count, seed):
     return sorted(ks)
 
 
-def week07_estimate(buckets, now, last):
-    """Week 7's DGIM.estimate rule, applied to a newest-first bucket list.
+def week7_original_estimate(buckets, now, last):
+    """Week 7 before the fix (commit 141deb1): kept only for comparison.
 
-    It counts every bucket whose timestamp is inside the range in full, then
-    adds half of the first bucket whose timestamp is outside the range.  That
-    is not the textbook rule (section 4.6.4 halves the oldest bucket that is
-    still inside), so it is reported separately as "week-07 as shipped".
+    That version counted every bucket whose timestamp is inside the range in
+    full, then added half of the first bucket outside the range, whose bits
+    are all expired.  Week 7 now uses the book's rule (section 4.6.4: half of
+    the oldest in-range bucket), the same rule as DGIMReduced.  ``buckets``
+    is a newest-first list of (size, timestamp) pairs.
     """
     cutoff = now - last
     total = 0.0
@@ -120,7 +121,7 @@ def run_stream(name, bits, window, rs, query_times, ks, seed):
                 if exact >= min_count:
                     errors[r].append(error)
                     if r == 2:
-                        old = week07_estimate(sketch.buckets, t, k)
+                        old = week7_original_estimate(sketch.buckets, t, k)
                         legacy.append(abs(old - exact) / exact)
                 else:
                     small[r]["queries"] += 1
@@ -160,7 +161,7 @@ def run_stream(name, bits, window, rs, query_times, ks, seed):
         "k_values": len(ks),
         "min_exact_count_scored": min_count,
         "elapsed_seconds": round(elapsed, 2),
-        "week07_as_shipped_r2": {
+        "week7_before_fix_141deb1_r2": {
             "mean_error": statistics.fmean(legacy) if legacy else None,
             "max_error": max(legacy) if legacy else None,
             "queries": len(legacy),
@@ -373,7 +374,7 @@ def main():
     for stream in streams:
         print(stream["stream"], stream["bits"], "bits", stream["ones"], "ones",
               stream["elapsed_seconds"], "s")
-        print("  week-07 as shipped (r=2):", stream["week07_as_shipped_r2"])
+        print("  Week 7 before the fix (141deb1), r=2:", stream["week7_before_fix_141deb1_r2"])
         for row in stream["by_r"]:
             print("  ", {k: (round(v, 4) if isinstance(v, float) else v) for k, v in row.items()})
 

@@ -20,8 +20,8 @@ algorithm.
 
 - `scripts/dgim_reduced_error.py`: `DGIMReduced(window, r=2)`. Each size has
   its own queue, so a merge is a constant-time move, not a list rebuild.
-  With r=2 it keeps exactly the same buckets as Week 7's `DGIM` (tested
-  step by step).
+  With r=2 it keeps exactly the same buckets and gives exactly the same
+  estimates as Week 7's `DGIM` (tested step by step).
 - `scripts/dgim_study.py`: one pass over each stream, every r side by side.
   Window N = 1,000,000 bits. 200 seeded query times x 60 range lengths k
   (log-spaced from 1 to N plus random ones), each compared with the exact
@@ -54,6 +54,18 @@ r buys less: the error falls like 1/r, while the memory grows like r.
 answer "how many in the last million?" within a few percent instead of within
 half, for about a kilobyte of memory.
 
+### A bug this found in Week 7
+
+Week 7's estimate counted every in-range bucket in full, then added half of
+the next bucket, whose bits had all expired. The book halves the oldest
+in-range bucket instead. Example: eight ones, window 5, exact count 5. The
+old rule said 8 (60% off, above the promised 50%); the book's rule says 6.
+On this study's queries the old rule averaged 62% error, worst 197%. Week 7
+now uses the book's rule, and its 10,000-event run moved from 46 (31.43%
+error) to 38 (8.57%), exact 35. The study keeps the old rule only as a
+labelled comparison (`week7_original_estimate`, Week 7 before the fix,
+commit 141deb1).
+
 ### Honest edge cases
 
 - **Very small counts.** The book's argument assumes the half-counted bucket
@@ -66,13 +78,6 @@ half, for about a kilobyte of memory.
 - **The 1/(r-1) formula is loose at r=2.** It gives 100% there; the basic
   analysis in section 4.6.4 gives the tighter 50%, and we never saw more
   than 49.3%.
-- **Week 7's estimate rule differs from the book.** Week 7 counts the oldest
-  in-range bucket in full and then adds half of the next, fully expired,
-  bucket. On these same queries that rule averaged 61.7% / 63.5% error, with a
-  worst case of 197% / 193%. A tested example: eight ones, window 5, true
-  count 5; Week 7 says 8, the book rule says 6. The buckets themselves match
-  exactly; only the last step of the estimate differs. This study uses the
-  book's rule for every r, including the r=2 "before".
 - The pageviews file is sorted by project and title, not by time, so "the
   last N lines" is a stand-in for "the last N events". It is still a real,
   bursty mix of hot and cold pages.
