@@ -62,7 +62,7 @@ Really popular pages are rare: only 461 of the last million lines were hot. DGIM
 
 ## Reducing DGIM error (section 4.6.6)
 
-![DGIM error by r](https://raw.githubusercontent.com/batmandoescalc/big_data/dev/week-08/docs/dgim-4.6.6.svg)
+![DGIM error by r](Week-8-dgim-4.6.6.svg)
 
 Basic DGIM groups the recent 1s into buckets of size 1, 2, 4, 8 and so on, and keeps one or two buckets of each size. Only the oldest bucket might hang over the edge of the window, so it gets counted as half. That one unsure bucket is why the answer can be off by up to half.
 
@@ -107,7 +107,7 @@ We ran the same code on my desktop and on the class head node. Both gave exactly
 | Python | 3.14 | 3.9 |
 | All four sketches, 135M lines | 5 min 8 s | 14 min 15 s |
 | Peak memory | 305 MB (includes exact answers) | 92 MB (sketches only) |
-| Hadoop FM job | - | 5 min 34 s |
+| Hadoop FM job | - | 5 min 39 s |
 
 On the head node everything ran at low priority with a memory cap, and we didn't change any cluster settings.
 
