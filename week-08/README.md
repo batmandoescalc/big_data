@@ -119,8 +119,10 @@ Run on a 16-core WSL2 workstation (Linux 6.6, Python 3.14.4), one process,
 pure Python, `flock`-guarded: 308 s for one streaming pass with all four
 sketches, plus 15 s for the exact answers; 323 s wall clock, peak resident
 memory 305 MB.  (A first run, before switching DGIM to `DGIMReduced`, took
-330 s and gave identical numbers.)  Full output: `data/week-08/results/full-day.json` (not
-committed).
+330 s and gave identical numbers.)  Full output:
+[`results/desktop-full-day.json`](results/desktop-full-day.json).  The same
+run on the class cluster gave identical estimates; see
+[Desktop vs. class cluster](#desktop-vs-class-cluster).
 
 | Algorithm | Question | Estimate | Exact | Error | Sketch memory | Exact memory (logical) |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -149,6 +151,64 @@ What the numbers say:
   each), the error ranged from 0.4% to 26.9%, inside DGIM's 50% guarantee.
   The stream order is dump order (sorted by wiki and title within each hour),
   not the order views happened.
+
+## Desktop vs. class cluster
+
+The same day was copied to the class head node (24 files, SHA-256 checked
+against the desktop copies), kept gzipped, and streamed through the same code.
+The head node has 4 cores, about 5 GB of free memory and 4.9 GB of disk in the
+student home folder, so the run there used `--skip-exact` (no 2.2 GB of
+temporary partition files) and copied the exact answers from the desktop run
+with `--exact-from`.  It ran with `nice -n 19` under a 2 GB memory limit, one
+process, and the head node's load stayed near 1 of 4 cores.
+
+| | Desktop (WSL2) | Class head node |
+| --- | --- | --- |
+| Python | 3.14.4 | 3.9.25 |
+| Four-sketch pass over 135 million lines | 308 s | 855 s (14 min 15 s) |
+| Exact answers | 15 s (on disk partitions) | copied from the desktop run |
+| Peak memory | 305 MB (sketches plus exact pass) | 92 MB (sketches only) |
+| Bloom / FM / AMS / DGIM estimates | 4,258,683 / 51,087,463 / 1.16742e13 / 564 | identical |
+
+Identical estimates are expected: the seeds are fixed and the hash is
+BLAKE2b, which does not change between machines or Python versions.  The
+cluster run's JSON records `estimates_match_reference: true`.  Results:
+[`results/cluster-full-day.json`](results/cluster-full-day.json),
+progress log [`results/cluster-run.log`](results/cluster-run.log).
+
+### FM as a Hadoop Streaming job
+
+`scripts/hadoop/` runs the FM sketch as a real MapReduce job:
+
+1. `fm_pageviews_mapper.py` hashes each page key once and prints only the
+   registers it touched (at most 4,096 lines per hour file).
+2. Hadoop sorts those lines by register number.
+3. Week 7's `fm_reducer.py` keeps the largest value per register.
+4. `fm_finish.py` turns the 4,096 merged registers into the estimate.  Week 7's
+   Hadoop job stopped at the register array and never printed a count; this
+   step closes that gap.
+
+Students cannot write to HDFS yet (issue #19), so
+`run-fm-pageviews-local.sh` runs Hadoop in local mode: input and output on
+the head node's own disk, one JVM with a 512 MB heap, `nice -n 19`, no
+cluster settings changed.  It refuses to overwrite earlier output.
+
+| | Value |
+| --- | --- |
+| Map tasks | 24 (one per gzip file; gzip cannot be split) |
+| Lines read by mappers | 135,421,176 |
+| Lines sent through the shuffle | 98,304 (24 x 4,096), about 1,400 times fewer |
+| Wall clock | 5 min 39 s |
+| Estimate | 51,087,463.25, identical to the single-process sketch |
+
+This is the point of FM in MapReduce: each mapper boils millions of lines
+down to a few kilobytes, and the merge is just "take the max".  Summary log:
+[`results/hadoop-fm-full-day.log`](results/hadoop-fm-full-day.log);
+merged registers: [`results/hadoop-fm-full-day-registers.tsv`](results/hadoop-fm-full-day-registers.tsv).
+
+```bash
+bash week-08/scripts/hadoop/run-fm-pageviews-local.sh INPUT_DIR NEW_OUTPUT_DIR
+```
 
 ## DGIM 4.6.6: reducing the error
 

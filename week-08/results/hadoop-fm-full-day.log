@@ -1,0 +1,22 @@
+Hadoop Streaming FM job, local mode on the class head node, 2026-11-03.
+Hadoop 3.4.3, Python 3.9.25, 4 cores, nice -n 19, client heap capped at 512 MB.
+Input: 24 hourly pageview files for 2026-10-27 (1,194,014,319 bytes gzipped),
+read from the head node's local disk because students cannot write to HDFS (#19).
+Command: bash week-08/scripts/hadoop/run-fm-pageviews-local.sh pageviews out-fm-full-day
+
+Job job_local_0001 completed successfully
+  Map tasks                 24 (one per gzip file; gzip cannot be split)
+  Map input records         135,421,176
+  Map output records        98,304 (24 x 4,096 register maxima)
+  Reduce input groups       4,096
+  Reduce output records     4,096
+  Wall clock                5m39s (user 7m04s, sys 0m12s)
+  Head node load average    about 1.5 of 4 cores during the run
+
+Finish step (merged registers -> estimate):
+{"registers": 4096, "registers_touched": 4096, "estimate": 51087463.24846185}
+Single-process estimate on the desktop: 51087463.24846185 (identical).
+Exact distinct pages: 49,476,423 (3.26% error).
+
+Earlier one-hour trial (hour 12): 18 s, estimate 5,907,907.45, identical to
+the single-process run; exact 5,944,493 (0.62% error).
