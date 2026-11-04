@@ -39,7 +39,7 @@ nice -n 19 hadoop jar "$HADOOP_HOME/share/hadoop/tools/lib/hadoop-streaming"*.ja
   -D mapreduce.cluster.local.dir="$work/local" \
   -D yarn.app.mapreduce.am.staging-dir="$work/staging" \
   -D mapreduce.job.reduces=1 \
-  -files "$script_dir/fm_pageviews_mapper.py,$week7/hadoop/fm_reducer.py,$script_dir/../pageviews.py,$week7/streaming.py" \
+  -files "$script_dir/fm_pageviews_mapper.py,$week7/hadoop/fm_reducer.py,$script_dir/../pageviews.py,$script_dir/../dgim_reduced_error.py,$script_dir/../dgim_study.py,$week7/streaming.py" \
   -mapper "python3 fm_pageviews_mapper.py $bits" \
   -reducer "python3 fm_reducer.py" \
   -input "file://$input/pageviews-*.gz" \

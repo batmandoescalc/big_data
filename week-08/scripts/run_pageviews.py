@@ -49,7 +49,7 @@ def main(argv=None) -> int:
                              "on the same files (refuses if the dataset differs)")
     parser.add_argument("--bloom-capacity", type=int, default=60_000_000,
                         help="keys the Bloom filter is sized for (a full day of build hours "
-                             "on 2026-10-27 inserts about 57 million)")
+                             "on 2026-10-27 inserts about 48 million)")
     parser.add_argument("--bloom-fp", type=float, default=0.01)
     parser.add_argument("--fm-register-bits", type=int, default=12)
     parser.add_argument("--ams-variables", type=int, default=4096)

@@ -98,7 +98,7 @@ three-hour dump gives hand-computed exact answers.
 ### Run
 
 ```bash
-flock /tmp/crew-heavy.lock python3 week-08/scripts/run_pageviews.py \
+python3 week-08/scripts/run_pageviews.py \
   --input-dir data/week-08/pageviews --hours 00-23 \
   --output data/week-08/results/full-day.json --work-dir data/week-08/tmp
 python3 week-08/scripts/run_pageviews.py --input-dir data/week-08/pageviews \
@@ -116,7 +116,7 @@ match a desktop run number for number.
 ## Results: full day 2026-10-27
 
 Run on a 16-core WSL2 workstation (Linux 6.6, Python 3.14.4), one process,
-pure Python, `flock`-guarded: 308 s for one streaming pass with all four
+pure Python: 308 s for one streaming pass with all four
 sketches, plus 15 s for the exact answers; 323 s wall clock, peak resident
 memory 305 MB.  (A first run, before switching DGIM to `DGIMReduced`, took
 330 s and gave identical numbers.)  Full output:

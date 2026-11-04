@@ -4,7 +4,7 @@ Issue #22, week of 2026-10-30 to 2026-11-05. Max Hawksby, with Noah Steinberg (c
 
 ## What we did
 
-- Picked a real dataset bigger than 1 GB and wrote one command that downloads it and checks every file.
+- Picked a real dataset bigger than 1 GB and wrote one command that downloads it, checks each file's size, and records a SHA-256 for each file.
 - Ran all four Week 7 streaming algorithms on it and compared each answer to the exact answer.
 - Tried the textbook's section 4.6.6 fix for DGIM and measured how much it cuts the error.
 - Found and fixed a bug in the Week 7 DGIM estimate.
@@ -48,7 +48,7 @@ What they mean:
 | --- | --- | --- |
 | Python | 3.14 | 3.9 |
 | Time for all four sketches | 5 min 8 s | 14 min 15 s |
-| Peak memory | 305 MB | 92 MB |
+| Peak memory | 305 MB (includes exact answers) | 92 MB (sketches only) |
 | Estimates | baseline | identical |
 
 The Hadoop FM job on the head node read all 135 million lines in 5 min 39 s. Only 98,304 lines went through the shuffle, and the final count matched the single-process answer exactly. It ran in Hadoop's local mode because students can't write to HDFS yet (#19). Nothing on the cluster was changed, and every run used low priority and a memory cap.

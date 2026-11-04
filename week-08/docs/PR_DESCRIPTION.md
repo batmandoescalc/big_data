@@ -20,7 +20,7 @@ For Week 8 (#22). We ran all four streaming algorithms from Week 7 on one full d
 | How concentrated views are (second moment) | AMS | 1.16742e13 | 1.16745e13 | 0.002% |
 | "Hot" lines (100+ views) in the last 1,000,000 | DGIM | 564 | 461 | 22.3% |
 
-The class head node gave the exact same four estimates as the desktop (14 min vs 5 min, 92 MB of memory). The Hadoop FM job read all 135 million lines in 5 min 39 s and sent only 98,304 lines through the shuffle.
+The class head node gave the exact same four estimates as the desktop (14 min vs 5 min; 92 MB of memory for the sketches alone). The Hadoop FM job read all 135 million lines in 5 min 39 s and sent only 98,304 lines through the shuffle.
 
 ## What changed
 
@@ -29,12 +29,12 @@ The class head node gave the exact same four estimates as the desktop (14 min vs
 
 Watch: this edits Week 7 code. Only the DGIM estimate changed; the bucket logic is the same, and new tests cover both cases.
 
-Watch: the raw data is not committed. One command downloads it again (`week-08/scripts/download_pageviews.py`), and a manifest checks every file.
+Watch: the raw data is not committed. One command downloads it again (`week-08/scripts/download_pageviews.py`). It checks each file's size against the server and records a SHA-256 for each file in a manifest.
 
 Watch: the cluster run did not touch HDFS or any cluster settings. Students still can't write to HDFS (#19), so the Hadoop job ran in local mode on the head node's own disk, at low priority with a memory cap.
 
 ## Checks
 
-`bash scripts/run-tests.sh` is green: 116 tests and 13 shell-script checks, on Python 3.14 and 3.9.
+`bash scripts/run-tests.sh` is green locally: 116 tests and 13 shell-script checks, on Python 3.14 here and Python 3.9 on the class head node. CI runs the same checks on 3.9 and 3.12.
 
 Requesting review from Matt. Please leave this open for his review.

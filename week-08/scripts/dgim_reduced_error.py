@@ -4,8 +4,9 @@ The basic DGIM algorithm (Week 7) keeps one or two buckets of each size
 1, 2, 4, ...  Section 4.6.6 generalizes this: keep r-1 or r buckets of each
 size (sizes 1 and the largest size present may hold 1..r).  When r+1 buckets
 of one size exist, the two oldest merge into one bucket of double size, and
-the merge may cascade upward.  The worst-case fractional error of a count
-falls from 1/2 (r=2, the basic algorithm) to at most 1/(r-1), at the cost of
+the merge may cascade upward.  The worst-case fractional error of a count is
+at most 1/(r-1) for r > 2; for r=2, the basic algorithm, the tighter section
+4.6.4 analysis gives 1/2 (the formula would give 1).  The price is
 keeping more buckets (roughly in proportion to r).
 
 Standard library only (Python 3.9 compatible).

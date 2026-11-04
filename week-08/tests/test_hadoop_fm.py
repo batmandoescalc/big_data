@@ -1,7 +1,10 @@
 """The Hadoop FM job for pageviews gives the same answer as one process."""
 
 from pathlib import Path
+import re
+import shutil
 import subprocess
+import tempfile
 import sys
 import unittest
 
@@ -48,6 +51,26 @@ class HadoopFMPageviewsTests(unittest.TestCase):
         out = run_script(HADOOP / "fm_pageviews_mapper.py",
                          b"not a pageview line\n", "4")
         self.assertEqual(out, b"")
+
+
+class HadoopShippedFilesTests(unittest.TestCase):
+    """The mapper runs with only the files the runner ships to Hadoop."""
+
+    def test_mapper_runs_in_a_folder_holding_only_the_shipped_files(self):
+        runner = (HADOOP / "run-fm-pageviews-local.sh").read_text()
+        shipped = re.search(r'-files "([^"]+)"', runner).group(1).split(",")
+        names = {"$script_dir": str(HADOOP), "$week7": str(REDUCER.parents[1])}
+        with tempfile.TemporaryDirectory() as task_dir:
+            for entry in shipped:
+                for var, value in names.items():
+                    entry = entry.replace(var, value)
+                shutil.copy(entry, task_dir)
+            # Hadoop runs the mapper from the task folder, like this.
+            out = subprocess.run(
+                [sys.executable, "-I", "fm_pageviews_mapper.py", "4"],
+                input=PART_A, cwd=task_dir, stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, check=True).stdout
+        self.assertTrue(out.strip())
 
 
 if __name__ == "__main__":
