@@ -14,7 +14,9 @@ sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "week-07" / "scripts"))
 
 from download_pageviews import file_name, file_url, parse_hours  # noqa: E402
-from pageviews import (HashedBloom, HashedFM, SkippingDGIM, WeightedAMS,  # noqa: E402
+from dgim_reduced_error import DGIMReduced  # noqa: E402
+from dgim_study import week7_original_estimate  # noqa: E402
+from pageviews import (HashedBloom, HashedFM, WeightedAMS, fill_exact_from,  # noqa: E402
                        find_files, key_hash, parse_line, run)
 from streaming import DGIM, AMSSecondMoment, exact_second_moment  # noqa: E402
 
@@ -155,34 +157,41 @@ class WeightedAMSTests(unittest.TestCase):
         self.assertLess(abs(week07.estimate() - exact) / exact, 0.15)
 
 
-class DGIMTests(unittest.TestCase):
-    """Skipping zeros keeps Week 7's buckets exactly, and the book estimate matches a hand count."""
+class DGIMSkipTests(unittest.TestCase):
+    """Skipping zeros in one step keeps Week 7's DGIM buckets and estimates exactly."""
 
-    def test_skipping_zeros_keeps_week_seven_buckets(self):
+    def test_add_zeros_matches_week_seven_bit_by_bit(self):
         rng = random.Random(3)
         bits = [1 if rng.random() < 0.2 else 0 for _ in range(3000)]
-        slow, fast = DGIM(100), SkippingDGIM(100)
+        slow, fast = DGIM(100), DGIMReduced(100, r=2)
         for t, bit in enumerate(bits, start=1):
             slow.add(bit)
             if bit:
-                fast.add_one_at(t)
+                fast.add_zeros(t - 1 - fast.time)
+                fast.add(1)
             if t % 37 == 0:
-                fast.advance_to(t)
-                self.assertEqual(list(slow.buckets), list(fast.buckets))
-        fast.advance_to(len(bits))
-        self.assertEqual(list(slow.buckets), list(fast.buckets))
-        self.assertEqual(fast.week07_estimate(50), slow.estimate(50))
+                fast.add_zeros(t - fast.time)
+                self.assertEqual(list(slow.buckets), fast.buckets)
+                for last in (1, 10, 50, 100):
+                    self.assertEqual(fast.estimate(last), slow.estimate(last))
+        with self.assertRaises(ValueError):
+            fast.add_zeros(-1)
 
     def test_book_estimate_by_hand(self):
-        dgim = SkippingDGIM(9)
+        slow, fast = DGIM(9), DGIMReduced(9, r=2)
         for t, bit in enumerate([1, 0, 0, 0, 1, 0, 0, 1, 1], start=1):
+            slow.add(bit)
             if bit:
-                dgim.add_one_at(t)
+                fast.add_zeros(t - 1 - fast.time)
+                fast.add(1)
         # Buckets newest first: size 1 @ 9, size 1 @ 8, size 2 @ 5.
-        self.assertEqual(list(dgim.buckets), [(1, 9), (1, 8), (2, 5)])
-        self.assertEqual(dgim.estimate(9), 1 + 1 + 2 / 2)       # exact 4
-        self.assertEqual(dgim.estimate(2), 1 + 1 / 2)           # exact 2
-        self.assertEqual(dgim.week07_estimate(9), 4)            # adds the oldest bucket in full
+        self.assertEqual(fast.buckets, [(1, 9), (1, 8), (2, 5)])
+        self.assertEqual(fast.estimate(9), 1 + 1 + 2 / 2)       # exact 4
+        self.assertEqual(fast.estimate(2), 1 + 1 / 2)           # exact 2
+        self.assertEqual(slow.estimate(9), fast.estimate(9))    # Week 7 now uses the book rule
+        self.assertEqual(slow.estimate(2), fast.estimate(2))
+        # Week 7 before its fix (commit 141deb1) added the oldest bucket in full.
+        self.assertEqual(week7_original_estimate(fast.buckets, fast.time, 9), 4)
 
 
 class ToyDayTests(unittest.TestCase):
@@ -211,6 +220,7 @@ class ToyDayTests(unittest.TestCase):
         self.assertEqual(algos["dgim"]["exact"], 4)
         self.assertEqual(algos["dgim"]["estimate"], 3.0)
         self.assertEqual(algos["dgim"]["queries"][0]["exact"], 2)
+        self.assertEqual(algos["dgim"]["queries"][1]["week07_before_fix_estimate"], 4)
         for name, algo in algos.items():
             for field in ("question", "estimate", "exact", "error_pct", "sketch_memory_bytes",
                           "exact_memory_bytes", "tells_us"):
@@ -235,6 +245,67 @@ class ToyDayTests(unittest.TestCase):
         self.assertEqual(result["algorithms"]["bloom"]["estimate"],
                          sum(bloom.contains_hash(h) for h in probes))
         self.assertEqual(result["algorithms"]["fm"]["estimate"], round(fm.estimate(), 1))
+
+
+class SkipExactTests(unittest.TestCase):
+    """The command line runs small hour ranges, and --skip-exact / --exact-from match a full run."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.folder = write_day(Path(self.tmp.name))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_skip_exact_keeps_estimates_and_nulls_exacts(self):
+        files = find_files(self.folder, set(range(24)))
+        settings = dict(bloom_capacity=2, bloom_fp=0.5, hot_threshold=3, dgim_window=9,
+                        dgim_queries=(2, 9))
+        full = run(files, **settings)
+        light = run(files, skip_exact=True, **settings)
+        self.assertEqual(json.dumps(full["dataset"]["files"]),
+                         json.dumps(light["dataset"]["files"]))
+        for name in ("bloom", "fm", "ams", "dgim"):
+            self.assertEqual(light["algorithms"][name]["estimate"],
+                             full["algorithms"][name]["estimate"])
+            self.assertIsNone(light["algorithms"][name]["exact"])
+            self.assertIsNone(light["algorithms"][name]["error_pct"])
+            self.assertTrue(light["algorithms"][name]["tells_us"])
+        self.assertEqual(set(light["algorithms"]["bloom"]), set(full["algorithms"]["bloom"]))
+        # Filling from the full run reproduces the full run's report exactly.
+        filled = fill_exact_from(light, full)
+        self.assertTrue(filled["estimates_match_reference"])
+        self.assertEqual(filled["algorithms"], full["algorithms"])
+
+    def test_exact_from_refuses_a_different_dataset(self):
+        full = run(find_files(self.folder, set(range(24))))
+        light = run(find_files(self.folder, {1, 2}), skip_exact=True)
+        with self.assertRaises(ValueError):
+            fill_exact_from(light, full)
+        with self.assertRaises(ValueError):
+            fill_exact_from(light, light)
+
+    def test_command_line_skip_exact_with_exact_from(self):
+        reference = Path(self.tmp.name) / "full.json"
+        output = Path(self.tmp.name) / "light.json"
+        script = str(SCRIPTS / "run_pageviews.py")
+        common = ["--input-dir", str(self.folder), "--hours", "00-02"]
+        subprocess.run([sys.executable, script, *common, "--output", str(reference)],
+                       check=True, capture_output=True)
+        subprocess.run([sys.executable, script, *common, "--skip-exact", "--exact-from",
+                        str(reference), "--output", str(output)],
+                       check=True, capture_output=True)
+        light, full = json.loads(output.read_text()), json.loads(reference.read_text())
+        self.assertTrue(light["estimates_match_reference"])
+        self.assertEqual(light["algorithms"]["ams"]["exact"], 10093)
+        self.assertEqual(light["algorithms"], full["algorithms"])
+        refused = subprocess.run([sys.executable, script, "--input-dir", str(self.folder),
+                                  "--hours", "01", "--skip-exact", "--exact-from",
+                                  str(reference), "--output", str(output) + ".x"],
+                                 capture_output=True, text=True)
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("refusing", refused.stderr)
+        self.assertFalse(Path(str(output) + ".x").exists())
 
     def test_command_line_single_hour(self):
         output = Path(self.tmp.name) / "out.json"

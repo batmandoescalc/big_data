@@ -66,6 +66,20 @@ class DGIMReduced:
                 j += 1
         self._expire()
 
+    def add_zeros(self, count: int) -> None:
+        """Process ``count`` zero bits in one step.
+
+        A zero bit only moves the clock and may expire the oldest bucket, so
+        jumping the clock and expiring once leaves exactly the buckets that
+        ``count`` calls to ``add(0)`` would.  On a sparse stream (135 million
+        pageview lines, about 0.2% ones) this skips almost every call.
+        """
+        if count < 0:
+            raise ValueError("count must not be negative")
+        if count:
+            self.time += count
+            self._expire()
+
     def _expire(self) -> None:
         cutoff = self.time - self.window
         levels = self._levels
