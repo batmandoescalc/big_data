@@ -7,7 +7,13 @@ Usage:
 
 The last selected hour is the Bloom probe hour; earlier hours build the
 filter.  Exact answers use temporary partition files (about 16 bytes per
-line) under --work-dir, removed when the run ends.
+line, 2.2 GB for the full day) under --work-dir, removed when the run ends.
+
+On a machine without that much disk (the class head node), run only the
+sketches and take the exact answers from an earlier full run on the same
+files.  The sketch seeds are fixed, so the estimates match number for number:
+    python3 week-08/scripts/run_pageviews.py --input-dir DIR --hours 00-23 \
+        --skip-exact --exact-from full-day.json --output cluster-day.json
 """
 
 from __future__ import annotations
@@ -24,7 +30,7 @@ import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from download_pageviews import parse_hours  # noqa: E402
-from pageviews import find_files, run  # noqa: E402
+from pageviews import fill_exact_from, find_files, run  # noqa: E402
 
 
 def main(argv=None) -> int:
@@ -36,6 +42,11 @@ def main(argv=None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--work-dir", type=Path, default=None,
                         help="folder for temporary exact-answer partitions (default: system temp)")
+    parser.add_argument("--skip-exact", action="store_true",
+                        help="run only the sketches: no temporary files, exact fields null")
+    parser.add_argument("--exact-from", type=Path, default=None,
+                        help="with --skip-exact: copy exact answers from an earlier full run "
+                             "on the same files (refuses if the dataset differs)")
     parser.add_argument("--bloom-capacity", type=int, default=60_000_000,
                         help="keys the Bloom filter is sized for (a full day of build hours "
                              "on 2026-10-27 inserts about 57 million)")
@@ -48,10 +59,15 @@ def main(argv=None) -> int:
     parser.add_argument("--dgim-window", type=int, default=1_000_000)
     args = parser.parse_args(argv)
 
+    if args.exact_from is not None and not args.skip_exact:
+        parser.error("--exact-from needs --skip-exact")
+    reference = None
+    if args.exact_from is not None:
+        reference = json.loads(args.exact_from.read_text(encoding="utf-8"))
     files = find_files(args.input_dir, set(parse_hours(args.hours)))
     started = time.perf_counter()
     work_dir = None
-    if args.work_dir is not None:
+    if args.work_dir is not None and not args.skip_exact:
         args.work_dir.mkdir(parents=True, exist_ok=True)
         work_dir = tempfile.mkdtemp(prefix="pageviews-exact-", dir=args.work_dir)
     try:
@@ -60,10 +76,18 @@ def main(argv=None) -> int:
                      ams_variables=args.ams_variables, ams_groups=args.ams_groups,
                      ams_seed=args.ams_seed, hot_threshold=args.hot_threshold,
                      dgim_window=args.dgim_window, work_dir=work_dir,
+                     skip_exact=args.skip_exact,
                      progress=lambda message: print(message, file=sys.stderr, flush=True))
     finally:
         if work_dir is not None:
             shutil.rmtree(work_dir, ignore_errors=True)
+    if reference is not None:
+        try:
+            fill_exact_from(result, reference)
+        except ValueError as error:
+            print(f"error: {error}", file=sys.stderr)
+            return 2
+        result["exact_from_file"] = str(args.exact_from)
     result["runtime_seconds"]["wall_clock"] = round(time.perf_counter() - started, 2)
     result["resources"] = {
         "peak_rss_mb": round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024, 1),

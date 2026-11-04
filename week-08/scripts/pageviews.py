@@ -36,10 +36,10 @@ import re
 import sys
 import tempfile
 import time
-from typing import Optional
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "week-07" / "scripts"))
-from streaming import DGIM  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dgim_reduced_error import DGIMReduced  # noqa: E402
+from dgim_study import week7_original_estimate  # noqa: E402
 
 FILE_PATTERN = re.compile(r"^pageviews-(\d{8})-(\d{2})0000\.gz$")
 _MASKS = tuple(1 << bit for bit in range(8))
@@ -265,58 +265,6 @@ class WeightedAMS:
 
 
 # --------------------------------------------------------------------------
-# DGIM that skips runs of zero bits in one step
-# --------------------------------------------------------------------------
-
-class SkippingDGIM(DGIM):
-    """Week 7 DGIM buckets, a one-step skip over zeros, and the book's estimate.
-
-    A zero bit only moves the clock and expires old buckets, so jumping the
-    clock forward and expiring once gives exactly the same buckets as adding
-    the zeros one at a time.
-
-    ``estimate`` follows the book (Section 4.6.3): add every bucket whose
-    newest one-bit is inside the last k lines, but only half of the oldest
-    such bucket, because it may stretch back past the edge.  Week 7's
-    ``DGIM.estimate`` adds that oldest bucket in full (and half of the next,
-    out-of-range bucket when there is one), so it can overcount by up to
-    the oldest bucket's whole size.  ``week07_estimate`` keeps that rule for
-    comparison.
-    """
-
-    def estimate(self, last: Optional[int] = None) -> float:
-        """Book DGIM estimate of one-bits among the latest ``last`` lines."""
-        if last is None:
-            last = self.window
-        if not 1 <= last <= self.window:
-            raise ValueError("last must be between 1 and the configured window")
-        cutoff = self.time - last
-        total = oldest = 0
-        for size, timestamp in self.buckets:  # newest first
-            if timestamp <= cutoff:
-                break
-            total += size
-            oldest = size
-        return total - oldest / 2
-
-    def week07_estimate(self, last: Optional[int] = None) -> float:
-        """The unchanged Week 7 rule, reported beside the book rule."""
-        return DGIM.estimate(self, last)
-
-    def advance_to(self, time_now: int) -> None:
-        """Act as if zero bits arrived until the clock reads ``time_now``."""
-        if time_now < self.time:
-            raise ValueError("time cannot move backwards")
-        self.time = time_now
-        self._expire()
-
-    def add_one_at(self, time_now: int) -> None:
-        """Record a one bit that arrives at clock ``time_now``."""
-        self.advance_to(time_now - 1)
-        self.add(1)
-
-
-# --------------------------------------------------------------------------
 # Running everything over a set of hourly files
 # --------------------------------------------------------------------------
 
@@ -371,11 +319,13 @@ class _Partitions:
 def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
         ams_variables=4096, ams_groups=8, ams_seed=4099, hot_threshold=100,
         dgim_window=1_000_000, dgim_queries=(1_000, 10_000, 100_000, 1_000_000),
-        work_dir=None, progress=None):
+        work_dir=None, progress=None, skip_exact=False):
     """Stream every file once through all four sketches, then compute exact answers.
 
     ``files`` is [(hour, path)] in stream order.  The last hour is the Bloom
-    probe hour; every earlier hour builds the filter.
+    probe hour; every earlier hour builds the filter.  With ``skip_exact``
+    only the sketches run: no partition files are written and every
+    exact-side field is null (the estimates are identical either way).
     """
     say = progress or (lambda message: None)
     files = sorted(files)
@@ -384,20 +334,23 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
     bloom = HashedBloom.for_capacity(bloom_capacity if build_hours else 1, bloom_fp)
     fm = HashedFM(fm_register_bits)
     ams = WeightedAMS(ams_variables, ams_seed, ams_groups)
-    dgim = SkippingDGIM(dgim_window)
+    # r=2 is the basic book DGIM (same buckets and estimates as fixed Week 7).
+    dgim = DGIMReduced(dgim_window, r=2)
     dgim_queries = sorted(k for k in dgim_queries if k <= dgim_window)
     if dgim_window not in dgim_queries:
         dgim_queries.append(dgim_window)
 
     owned_tmp = None
-    if work_dir is None:
+    if not skip_exact and work_dir is None:
         owned_tmp = tempfile.TemporaryDirectory(prefix="pageviews-exact-")
         work_dir = owned_tmp.name
-    work = Path(work_dir)
-    work.mkdir(parents=True, exist_ok=True)
-    built, probed = _Partitions(work, "build"), _Partitions(work, "probe")
+    if not skip_exact:
+        work = Path(work_dir)
+        work.mkdir(parents=True, exist_ok=True)
+        built, probed = _Partitions(work, "build"), _Partitions(work, "probe")
+    keep_exact = not skip_exact
 
-    lines = views = skipped = 0
+    lines = views = skipped = bloom_hits = 0
     hot_times = deque()  # exact DGIM side: arrival times of one bits inside the window
     checkpoints = []
     per_file = []
@@ -413,10 +366,11 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
 
     for hour, path in files:
         is_probe = hour == probe_hour
-        parts = probed if is_probe else built
-        part_h, part_v = parts.hashes, parts.values
+        if keep_exact:
+            parts = probed if is_probe else built
+            part_h, part_v = parts.hashes, parts.values
         file_started = time.perf_counter()
-        file_lines = file_views = file_skipped = 0
+        file_views = file_skipped = 0
         t = lines
         with gzip.open(path, "rb") as handle:
             for line in handle:
@@ -447,6 +401,7 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
                         p += step
                         if p >= nbits:
                             p -= nbits
+                    bloom_hits += hit
                     value = c * 2 + hit
                 else:
                     for _ in range(khashes):
@@ -457,33 +412,33 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
                     value = c
 
                 # Exact side: remember (hash, value) on disk by partition
-                part = h >> 58
-                part_h[part].append(h)
-                part_v[part].append(value)
+                if keep_exact:
+                    part = h >> 58
+                    part_h[part].append(h)
+                    part_v[part].append(value)
 
                 # AMS and DGIM
                 ams_add(h, c)
                 if c >= hot_threshold:
-                    dgim.add_one_at(t)
-                    hot_times.append(t)
-                    while hot_times[0] <= t - dgim_window:
-                        hot_times.popleft()
+                    dgim.add_zeros(t - 1 - dgim.time)
+                    dgim.add(1)
+                    if keep_exact:
+                        hot_times.append(t)
+                        while hot_times[0] <= t - dgim_window:
+                            hot_times.popleft()
         file_lines = t - lines
         lines = t
         views += file_views
         skipped += file_skipped
-        parts.flush()
+        if keep_exact:
+            parts.flush()
         if not is_probe:
             bloom.inserted += file_lines
-        dgim.advance_to(lines)
-        while hot_times and hot_times[0] <= lines - dgim_window:
-            hot_times.popleft()
+        dgim.add_zeros(lines - dgim.time)
         last = max(1, min(dgim_window, lines))
-        exact_ones = len(hot_times) - bisect_right(list(hot_times), lines - last)
-        dgim_estimate = dgim.estimate(last) if lines else 0.0
         checkpoints.append({"after_hour": hour, "lines": lines, "last": last,
-                            "estimate": dgim_estimate, "exact": exact_ones,
-                            "error_pct": _round(percent_error(dgim_estimate, exact_ones), 3)})
+                            "estimate": dgim.estimate(last) if lines else 0.0,
+                            "exact": _exact_recent(hot_times, lines, last) if keep_exact else None})
         seconds = time.perf_counter() - file_started
         per_file.append({"file": path.name, "hour": hour, "lines": file_lines,
                          "views": file_views, "skipped_lines": file_skipped,
@@ -492,24 +447,112 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
     stream_seconds = time.perf_counter() - stream_started
 
     # DGIM answers for several window suffixes at the end of the stream.
-    hot_list = list(hot_times)
     dgim_rows = []
     for k in dgim_queries:
-        last = min(k, lines) if lines else 1
-        exact_ones = len(hot_list) - bisect_right(hot_list, lines - last) if lines else 0
-        estimate = dgim.estimate(last) if lines else 0.0
-        week07 = dgim.week07_estimate(last) if lines else 0.0
-        dgim_rows.append({"last_lines": last, "estimate": estimate, "exact": exact_ones,
-                          "error_pct": _round(percent_error(estimate, exact_ones), 3),
-                          "week07_rule_estimate": week07,
-                          "week07_rule_error_pct": _round(percent_error(week07, exact_ones), 3)})
+        last = max(1, min(k, lines))
+        dgim_rows.append({
+            "last_lines": last,
+            "estimate": dgim.estimate(last) if lines else 0.0,
+            "exact": _exact_recent(hot_times, lines, last) if keep_exact else None,
+            "week07_before_fix_estimate":
+                week7_original_estimate(dgim.buckets, dgim.time, last) if lines else 0.0,
+        })
 
-    # Exact pass, one partition at a time.
     exact_started = time.perf_counter()
-    distinct = 0
-    f2 = 0
-    distinct_before_probe = 0
-    probe_keys = probe_seen = bloom_yes = false_pos = false_neg = 0
+    exact = _exact_answers(built, probed) if keep_exact else None
+    exact_seconds = time.perf_counter() - exact_started
+    if owned_tmp is not None:
+        owned_tmp.cleanup()
+
+    final = dgim_rows[-1]
+    result = {
+        "dataset": {
+            "files": [path.name for _, path in files],
+            "hours": [hour for hour, _ in files],
+            "lines": lines, "views": views,
+            "bytes_gz": sum(path.stat().st_size for _, path in files),
+            "skipped_lines": skipped,
+            "key": "wiki_code + ' ' + page_title",
+            "per_file": per_file,
+        },
+        "exact_source": "computed in this run" if keep_exact else "skipped (--skip-exact)",
+        "algorithms": {
+            "bloom": {
+                "question": f"For each page viewed in hour {probe_hour:02d}, was it already "
+                            "viewed earlier the same day?",
+                "estimate": bloom_hits,
+                "build_hours": build_hours, "probe_hour": probe_hour,
+                "target_false_positive_rate": bloom_fp,
+                "insert_lines": bloom.inserted,
+                "sized_for_keys": bloom_capacity if build_hours else 0,
+                "bits": bloom.bits, "hashes": bloom.hashes,
+                "sketch_memory_bytes": bloom.memory_bytes,
+                "exact_memory_note": "a set of one 8-byte hash per key seen before the "
+                                     "probe hour",
+            },
+            "fm": {
+                "question": "How many different pages were viewed at least once?",
+                "estimate": round(fm.estimate(), 1),
+                "registers": fm.m, "combine": "harmonic mean with HyperLogLog bias constant",
+                "sketch_memory_bytes": fm.memory_bytes,
+                "exact_memory_note": "a set of one 8-byte hash per distinct key",
+            },
+            "ams": {
+                "question": "How concentrated are views on a few pages (second moment F2, "
+                            "the surprise number)?",
+                "estimate": ams.estimate(), "mean_estimate": ams.mean_estimate(),
+                "variables": len(ams.counts), "groups": ams.groups,
+                "combine": "median of group means (book Section 4.5.2); mean_estimate is "
+                           "the plain average of all variables",
+                "stream_arrivals": ams.length,
+                "sketch_memory_bytes": ams.memory_bytes,
+                "exact_memory_note": "an 8-byte hash and an 8-byte view total per "
+                                     "distinct key",
+            },
+            "dgim": {
+                "question": f"Among the last {dgim_window:,} lines, how many are hot pages "
+                            f"(at least {hot_threshold} views in that hour)?",
+                "estimate": final["estimate"], "exact": final["exact"],
+                "window_lines": dgim_window, "hot_threshold_views": hot_threshold,
+                "hours_streamed": [hour for hour, _ in files],
+                "queries": dgim_rows,
+                "checkpoints_end_of_each_hour": checkpoints,
+                "buckets": dgim.bucket_count,
+                "week07_before_fix_note": "week07_before_fix_* use Week 7's estimate rule "
+                                          "before its fix (commit 141deb1), for comparison "
+                                          "only",
+                "stream_order_note": "lines are in dump order (hour by hour, sorted by wiki "
+                                     "and title within an hour), not the order views "
+                                     "happened",
+                "sketch_memory_bytes": dgim.memory_bytes,
+                "exact_memory_bytes": (dgim_window + 7) // 8,
+                "exact_memory_note": "one bit per line in the window",
+            },
+        },
+        "runtime_seconds": {"stream_pass_all_sketches": round(stream_seconds, 2),
+                            "exact_pass": round(exact_seconds, 2),
+                            "total": round(stream_seconds + exact_seconds, 2)},
+    }
+    if not build_hours:
+        result["algorithms"]["bloom"]["note"] = ("only one hour selected: the filter is "
+                                                 "empty, every probe is new")
+    _set_exact(result, exact)
+    finalize(result)
+    return result
+
+
+def _exact_recent(hot_times, now: int, last: int) -> int:
+    """Exact one-bits among the latest ``last`` lines, from one-bit arrival times."""
+    if not now:
+        return 0
+    times = list(hot_times)
+    return len(times) - bisect_right(times, now - last)
+
+
+def _exact_answers(built: "_Partitions", probed: "_Partitions") -> dict:
+    """Total each partition in turn and return every exact number the report needs."""
+    distinct = f2 = distinct_before_probe = 0
+    probe_keys = probe_seen = false_pos = false_neg = 0
     for part in range(_Partitions.PARTS):
         hashes, values = built.load(part)
         totals = {}
@@ -529,125 +572,153 @@ def run(files, bloom_capacity=60_000_000, bloom_fp=0.01, fm_register_bits=12,
             seen = h in totals
             probe_keys += 1
             probe_seen += seen
-            bloom_yes += hit
             false_pos += hit and not seen
             false_neg += seen and not hit
             totals[h] = totals.get(h, 0) + c
         distinct += len(totals)
         f2 += sum(v * v for v in totals.values())
         del totals, probe
-    exact_seconds = time.perf_counter() - exact_started
-    if owned_tmp is not None:
-        owned_tmp.cleanup()
+    return {"distinct": distinct, "f2": f2, "distinct_before_probe": distinct_before_probe,
+            "probe_keys": probe_keys, "probe_seen": probe_seen,
+            "false_positives": false_pos, "false_negatives": false_neg}
 
-    # ---- Assemble the four answers ----
-    truly_new = probe_keys - probe_seen
-    fp_rate = false_pos / truly_new if truly_new else 0.0
-    bloom_result = {
-        "question": f"For each page viewed in hour {probe_hour:02d}, was it already viewed "
-                    "earlier the same day?",
-        "estimate": bloom_yes, "exact": probe_seen,
-        "error_pct": _round(percent_error(bloom_yes, probe_seen), 4),
-        "build_hours": build_hours, "probe_hour": probe_hour,
-        "probe_keys": probe_keys, "truly_new_keys": truly_new,
-        "false_positives": false_pos, "false_positive_rate": fp_rate,
-        "false_negatives": false_neg,
-        "target_false_positive_rate": bloom_fp,
-        "keys_inserted": distinct_before_probe, "insert_lines": bloom.inserted,
-        "sized_for_keys": bloom_capacity if build_hours else 0,
-        "theoretical_false_positive_rate": bloom.theoretical_fp(distinct_before_probe),
-        "bits": bloom.bits, "hashes": bloom.hashes,
-        "sketch_memory_bytes": bloom.memory_bytes,
-        "exact_memory_bytes": distinct_before_probe * 8,
-        "exact_memory_note": "a set of one 8-byte hash per key seen before the probe hour",
-        "tells_us": (f"{probe_seen / probe_keys:.0%} of the pages read in hour "
-                     f"{probe_hour:02d} had already been read earlier that day; the filter "
-                     f"never missed one of those and wrongly said \"seen\" for only "
-                     f"{fp_rate:.2%} of the truly new pages."
-                     if probe_keys and build_hours else
-                     "Only one hour was selected, so nothing was viewed earlier; use 2+ hours."),
-    }
-    if not build_hours:
-        bloom_result["note"] = "only one hour selected: the filter is empty, every probe is new"
 
-    fm_estimate = fm.estimate()
-    fm_result = {
-        "question": "How many different pages were viewed at least once?",
-        "estimate": round(fm_estimate, 1), "exact": distinct,
-        "error_pct": _round(percent_error(fm_estimate, distinct), 4),
-        "registers": fm.m, "combine": "harmonic mean with HyperLogLog bias constant",
-        "sketch_memory_bytes": fm.memory_bytes,
-        "exact_memory_bytes": distinct * 8,
-        "exact_memory_note": "a set of one 8-byte hash per distinct key",
-        "tells_us": (f"About {fm_estimate / 1e6:.1f} million different pages were viewed in "
-                     f"{len(files)} hour(s), from {fm.m:,} one-byte counters instead of a "
-                     "list of every page."),
-    }
+# Fields that depend on the exact answers.  With --skip-exact they are null,
+# and --exact-from copies them from an earlier full run on the same files.
+EXACT_FIELDS = {
+    "bloom": ("exact", "probe_keys", "truly_new_keys", "false_positives",
+              "false_positive_rate", "false_negatives", "keys_inserted",
+              "theoretical_false_positive_rate", "exact_memory_bytes"),
+    "fm": ("exact", "exact_memory_bytes"),
+    "ams": ("exact", "surprise_meaning", "exact_memory_bytes"),
+    "dgim": ("exact",),
+}
 
-    ams_estimate = ams.estimate()
-    effective_pages = views * views / f2 if f2 else 0.0
-    ams_result = {
-        "question": "How concentrated are views on a few pages (second moment F2, the "
-                    "surprise number)?",
-        "estimate": ams_estimate, "exact": f2,
-        "error_pct": _round(percent_error(ams_estimate, f2), 4),
-        "mean_estimate": ams.mean_estimate(),
-        "mean_error_pct": _round(percent_error(ams.mean_estimate(), f2), 4),
-        "variables": len(ams.counts), "groups": ams.groups,
-        "combine": "median of group means (book Section 4.5.2); mean_estimate is the "
-                   "plain average of all variables",
-        "stream_arrivals": ams.length,
+
+def _set_exact(result: dict, exact) -> None:
+    """Write exact-side fields from ``_exact_answers`` output, or nulls when None."""
+    algos = result["algorithms"]
+    if exact is None:
+        for name, fields in EXACT_FIELDS.items():
+            for field in fields:
+                algos[name][field] = None
+        return
+    views = result["dataset"]["views"]
+    bloom, fm, ams = algos["bloom"], algos["fm"], algos["ams"]
+    distinct, f2 = exact["distinct"], exact["f2"]
+    truly_new = exact["probe_keys"] - exact["probe_seen"]
+    bloom.update({
+        "exact": exact["probe_seen"], "probe_keys": exact["probe_keys"],
+        "truly_new_keys": truly_new, "false_positives": exact["false_positives"],
+        "false_positive_rate": exact["false_positives"] / truly_new if truly_new else 0.0,
+        "false_negatives": exact["false_negatives"],
+        "keys_inserted": exact["distinct_before_probe"],
+        "theoretical_false_positive_rate": HashedBloom(bloom["bits"], bloom["hashes"])
+        .theoretical_fp(exact["distinct_before_probe"]),
+        "exact_memory_bytes": exact["distinct_before_probe"] * 8,
+    })
+    fm.update({"exact": distinct, "exact_memory_bytes": distinct * 8})
+    ams.update({
+        "exact": f2,
         "surprise_meaning": {
             "uniform_f2_if_views_were_spread_evenly": views * views / distinct if distinct else 0,
-            "collision_probability_two_random_views_same_page": f2 / (views * views) if views else 0,
-            "effective_number_of_pages": effective_pages,
+            "collision_probability_two_random_views_same_page":
+                f2 / (views * views) if views else 0,
+            "effective_number_of_pages": views * views / f2 if f2 else 0.0,
         },
-        "sketch_memory_bytes": ams.memory_bytes,
         "exact_memory_bytes": distinct * 16,
-        "exact_memory_note": "an 8-byte hash and an 8-byte view total per distinct key",
-        "tells_us": (f"Two random views land on the same page {f2 / views / views:.3%} of "
-                     f"the time: attention acts like it is spread over only about "
-                     f"{effective_pages:,.0f} pages, not {distinct:,}."
-                     if views else "No views."),
-    }
+    })
 
-    final = dgim_rows[-1] if dgim_rows else {"estimate": 0, "exact": 0, "error_pct": 0.0}
-    errors = [row["error_pct"] for row in checkpoints if row["error_pct"] is not None]
-    dgim_result = {
-        "question": f"Among the last {dgim_window:,} lines, how many are hot pages "
-                    f"(at least {hot_threshold} views in that hour)?",
-        "estimate": final["estimate"], "exact": final["exact"],
-        "error_pct": final["error_pct"],
-        "window_lines": dgim_window, "hot_threshold_views": hot_threshold,
-        "hours_streamed": [hour for hour, _ in files],
-        "queries": dgim_rows,
-        "checkpoints_end_of_each_hour": checkpoints,
-        "max_checkpoint_error_pct": max(errors) if errors else 0.0,
-        "buckets": len(dgim.buckets),
-        "stream_order_note": "lines are in dump order (hour by hour, sorted by wiki and "
-                             "title within an hour), not the order views happened",
-        "sketch_memory_bytes": dgim.memory_bytes,
-        "exact_memory_bytes": (dgim_window + 7) // 8,
-        "exact_memory_note": "one bit per line in the window",
-        "tells_us": (f"About {final['estimate']:,.0f} of the last {max(1, min(dgim_window, lines)):,} "
-                     f"records ({final['estimate'] / max(1, min(dgim_window, lines)):.2%}) were "
-                     f"hot pages with {hot_threshold}+ views in an hour: almost every page "
-                     "gets only a handful of views."),
-    }
 
-    return {
-        "dataset": {
-            "files": [path.name for _, path in files],
-            "hours": [hour for hour, _ in files],
-            "lines": lines, "views": views,
-            "bytes_gz": sum(path.stat().st_size for _, path in files),
-            "skipped_lines": skipped,
-            "key": "wiki_code + ' ' + page_title",
-            "per_file": per_file,
-        },
-        "algorithms": {"bloom": bloom_result, "fm": fm_result,
-                       "ams": ams_result, "dgim": dgim_result},
-        "runtime_seconds": {"stream_pass_all_sketches": round(stream_seconds, 2),
-                            "exact_pass": round(exact_seconds, 2),
-                            "total": round(stream_seconds + exact_seconds, 2)},
-    }
+def _err(estimate, exact, digits):
+    return None if exact is None else _round(percent_error(estimate, exact), digits)
+
+
+def finalize(result: dict) -> None:
+    """Recompute every error field and plain-English sentence from estimates and exacts."""
+    algos = result["algorithms"]
+    lines = result["dataset"]["lines"]
+    bloom, fm, ams, dgim = algos["bloom"], algos["fm"], algos["ams"], algos["dgim"]
+    for name, digits in (("bloom", 4), ("fm", 4), ("ams", 4)):
+        algos[name]["error_pct"] = _err(algos[name]["estimate"], algos[name]["exact"], digits)
+    ams["mean_error_pct"] = _err(ams["mean_estimate"], ams["exact"], 4)
+    for row in dgim["queries"]:
+        row["error_pct"] = _err(row["estimate"], row["exact"], 3)
+        row["week07_before_fix_error_pct"] = _err(row["week07_before_fix_estimate"],
+                                                  row["exact"], 3)
+    for row in dgim["checkpoints_end_of_each_hour"]:
+        row["error_pct"] = _err(row["estimate"], row["exact"], 3)
+    final = dgim["queries"][-1]
+    dgim["exact"], dgim["error_pct"] = final["exact"], final["error_pct"]
+    errors = [row["error_pct"] for row in dgim["checkpoints_end_of_each_hour"]
+              if row["error_pct"] is not None]
+    dgim["max_checkpoint_error_pct"] = max(errors) if errors else None
+
+    if not bloom["build_hours"]:
+        bloom["tells_us"] = "Only one hour was selected, so nothing was viewed earlier; use 2+ hours."
+    elif bloom["exact"] is None or not bloom["probe_keys"]:
+        bloom["tells_us"] = (f"The filter says {bloom['estimate']:,} pages read in hour "
+                             f"{bloom['probe_hour']:02d} had probably been read earlier that day.")
+    else:
+        bloom["tells_us"] = (
+            f"{bloom['exact'] / bloom['probe_keys']:.0%} of the pages read in hour "
+            f"{bloom['probe_hour']:02d} had already been read earlier that day; the filter "
+            f"never missed one of those and wrongly said \"seen\" for only "
+            f"{bloom['false_positive_rate']:.2%} of the truly new pages.")
+    fm["tells_us"] = (f"About {fm['estimate'] / 1e6:.1f} million different pages were viewed "
+                      f"in {len(result['dataset']['hours'])} hour(s), from {fm['registers']:,} "
+                      "one-byte counters instead of a list of every page.")
+    views = result["dataset"]["views"]
+    if not views:
+        ams["tells_us"] = "No views."
+    elif ams["exact"] is None:
+        ams["tells_us"] = (f"Two random views land on the same page about "
+                           f"{ams['estimate'] / views / views:.3%} of the time, so attention "
+                           f"acts like it is spread over only about "
+                           f"{views * views / ams['estimate']:,.0f} pages.")
+    else:
+        ams["tells_us"] = (
+            f"Two random views land on the same page {ams['exact'] / views / views:.3%} of "
+            f"the time: attention acts like it is spread over only about "
+            f"{ams['surprise_meaning']['effective_number_of_pages']:,.0f} pages, not "
+            f"{fm['exact']:,}.")
+    shown = max(1, min(dgim["window_lines"], lines))
+    dgim["tells_us"] = (f"About {dgim['estimate']:,.0f} of the last {shown:,} records "
+                        f"({dgim['estimate'] / shown:.2%}) were hot pages with "
+                        f"{dgim['hot_threshold_views']}+ views in an hour: almost every page "
+                        "gets only a handful of views.")
+
+
+def fill_exact_from(result: dict, reference: dict) -> dict:
+    """Copy exact answers from an earlier full run on the same files, then recompute errors.
+
+    Refuses (ValueError) unless the dataset files, hours, line counts and views
+    match.  Also records whether every sketch estimate equals the reference
+    run's, which it should, since the seeds are fixed.
+    """
+    mine, theirs = result["dataset"], reference["dataset"]
+    for field in ("files", "hours", "lines", "views", "skipped_lines"):
+        if mine.get(field) != theirs.get(field):
+            raise ValueError(f"reference run has different dataset {field}; refusing to "
+                             "copy its exact answers")
+    if reference.get("exact_source") == "skipped (--skip-exact)" or \
+            reference["algorithms"]["fm"].get("exact") is None:
+        raise ValueError("reference run has no exact answers")
+    algos, ref = result["algorithms"], reference["algorithms"]
+    for name, fields in EXACT_FIELDS.items():
+        for field in fields:
+            algos[name][field] = ref[name][field]
+    dgim, ref_dgim = algos["dgim"], ref["dgim"]
+    for kind in ("queries", "checkpoints_end_of_each_hour"):
+        if len(dgim[kind]) != len(ref_dgim[kind]):
+            raise ValueError(f"reference run has different DGIM {kind}; refusing")
+        for row, ref_row in zip(dgim[kind], ref_dgim[kind]):
+            row["exact"] = ref_row["exact"]
+    mismatches = [name for name in algos
+                  if algos[name]["estimate"] != ref[name]["estimate"]]
+    result["exact_source"] = "copied from an earlier full run (--exact-from)"
+    result["estimates_match_reference"] = not mismatches
+    if mismatches:
+        result["estimate_mismatches"] = mismatches
+    finalize(result)
+    return result
