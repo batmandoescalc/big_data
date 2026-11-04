@@ -35,6 +35,6 @@ Watch: the cluster run did not touch HDFS or any cluster settings. Students stil
 
 ## Checks
 
-`bash scripts/run-tests.sh` is green locally: 116 tests and 13 shell-script checks, on Python 3.14 here and Python 3.9 on the class head node. CI runs the same checks on 3.9 and 3.12.
+`bash scripts/run-tests.sh` is green on my desktop (Python 3.14): 117 tests and 13 shell-script checks. The same 117 unit tests also pass on Python 3.9 on the class head node. CI runs the checks on 3.9 and 3.12.
 
 Requesting review from Matt. Please leave this open for his review.

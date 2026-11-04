@@ -20,3 +20,7 @@ Exact distinct pages: 49,476,423 (3.26% error).
 
 Earlier one-hour trial (hour 12): 18 s, estimate 5,907,907.45, identical to
 the single-process run; exact 5,944,493 (0.62% error).
+
+Rerun with the final committed runner (after shipping the DGIM modules the
+mapper imports), same day: completed successfully in 5m34s, merged registers
+byte-for-byte identical to the run above, same estimate.
