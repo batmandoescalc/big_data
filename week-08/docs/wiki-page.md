@@ -39,7 +39,7 @@ We ran the same code on my desktop and on the class head node. The estimates wer
 | Time for all four sketches | 5 min | 14 min |
 | Peak memory | 305 MB (includes exact answers) | 92 MB (sketches only) |
 
-We also ran FM as a Hadoop Streaming job on the head node. 24 mappers read all 135 million lines, but only 98,304 lines went through the shuffle, because each mapper only sends its 4,096 registers. The reducer takes the max of each register, and the final count matched the single-process answer exactly. Students can't write to HDFS yet (#19), so this ran in Hadoop's local mode on the head node's disk.
+We also ran FM as a Hadoop Streaming job on the head node. 24 mappers read all 135 million lines, but only 98,304 lines went through the shuffle, because each mapper only sends its 4,096 registers. The reducer takes the max of each register, and the final count matched the single-process answer exactly. We can't write to HDFS yet (our account has no HDFS folder we're allowed to write to, #19), so this ran in Hadoop's local mode on the head node's disk.
 
 ## DGIM: reducing the error (section 4.6.6)
 

@@ -27,11 +27,9 @@ The class head node gave the exact same four estimates as the desktop (14 min vs
 - `week-08/`: download script, the four sketches on pageviews, the DGIM 4.6.6 study and chart, the Hadoop FM job, tests, small result files and logs, and the wiki page text.
 - `week-07/scripts/streaming.py`: the DGIM estimate now halves the oldest bucket inside the range, like the book. Before, it also added half of a bucket that was already outside the window. Eight ones in a window of 5 gave 8 instead of 6 (exact 5). Week 7's own run moves from 46 (31% error) to 38 (8.6% error), exact 35. The Week 7 README and test were updated to match.
 
-Watch: this edits Week 7 code. Only the DGIM estimate changed; the bucket logic is the same, and new tests cover both cases.
+Heads up - we edited Week 7's code (see above for why). Only the DGIM estimate changed. The bucket logic is the same, so Week 7 keeps exactly the same buckets as before, and new tests cover both the old answer and the fixed one.
 
-Watch: the raw data is not committed. One command downloads it again (`week-08/scripts/download_pageviews.py`). It checks each file's size against the server and records a SHA-256 for each file in a manifest.
-
-Watch: the cluster run did not touch HDFS or any cluster settings. Students still can't write to HDFS (#19), so the Hadoop job ran in local mode on the head node's own disk, at low priority with a memory cap.
+We can't write to HDFS yet: our account has no HDFS folder we're allowed to write to, so uploads get refused (#19). So we ran the Hadoop job in Hadoop's local mode instead, reading the files from the head node's own disk, at low priority with a memory cap. We didn't change any cluster settings.
 
 ## Checks
 

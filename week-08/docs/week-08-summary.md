@@ -51,7 +51,7 @@ What they mean:
 | Peak memory | 305 MB (includes exact answers) | 92 MB (sketches only) |
 | Estimates | baseline | identical |
 
-The Hadoop FM job on the head node read all 135 million lines in 5 min 39 s. Only 98,304 lines went through the shuffle, and the final count matched the single-process answer exactly. It ran in Hadoop's local mode because students can't write to HDFS yet (#19). Nothing on the cluster was changed, and every run used low priority and a memory cap.
+The Hadoop FM job on the head node read all 135 million lines in 5 min 39 s. Only 98,304 lines went through the shuffle, and the final count matched the single-process answer exactly. It ran in Hadoop's local mode because we can't write to HDFS yet: our account has no HDFS folder we're allowed to write to (#19). Nothing on the cluster was changed, and every run used low priority and a memory cap.
 
 ## Noah's crash test
 
