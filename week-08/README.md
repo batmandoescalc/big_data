@@ -131,6 +131,9 @@ run on the class cluster gave identical estimates; see
 | AMS | Second moment F2 of views per page | 1.16742e13 | 1.16745e13 | 0.002% | 64 KB | 792 MB |
 | DGIM | Hot lines among the last 1,000,000 | 564 | 461 | 22.3% | 224 B | 125 KB |
 
+Run time for each row, sketch vs. exact: see
+[Run times: estimate vs. exact](#run-times-estimate-vs-exact).
+
 What the numbers say:
 
 - **Bloom**: 78% of the 5,453,115 pages read in hour 23 had been read earlier
@@ -151,6 +154,43 @@ What the numbers say:
   each), the error ranged from 0.4% to 26.9%, inside DGIM's 50% guarantee.
   The stream order is dump order (sorted by wiki and title within each hour),
   not the order views happened.
+
+### Run times: estimate vs. exact
+
+The full-day pass runs all four sketches together, so it has one combined
+time (308 s).  To time each row on its own,
+[`scripts/time_algorithms.py`](scripts/time_algorithms.py) loads hours 22-23
+(11,374,268 lines) into memory once, then runs each sketch and each exact
+method alone over the same stream, 3 times each, keeping the fastest.
+Reading, parsing and hashing (16 s, shared by every method) is not counted.
+Laptop WSL2, Python 3.12.  Full output:
+[`results/runtimes-2-hours.json`](results/runtimes-2-hours.json).
+
+| Algorithm | Sketch time | Exact time | Sketch peak memory | Exact peak memory | Error |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Bloom | 17.7 s | 1.7 s | 7.1 MB | 403 MB | 1.5% |
+| FM | 2.3 s | 1.6 s | under 0.1 MB | 403 MB | 0.7% |
+| AMS | 1.5 s | 4.6 s | 2.3 MB | 503 MB | 0.9% |
+| DGIM | 0.25 s | 0.24 s | under 0.1 MB | 0.2 MB | 3.9% |
+
+What this shows:
+
+- **Time is not the win here.**  Python's `set` and `dict` run in C, and our
+  sketches are pure Python, so exact is as fast or faster for Bloom, FM and
+  DGIM.  Bloom is slowest because each key sets 7 bits one at a time in a
+  Python loop.  AMS is the one sketch faster than exact: it touches 4,096
+  counters, while exact grows a dictionary of 10 million pages.
+- **Memory is the win.**  The sketches stay at a few MB or less, fixed in
+  advance.  The exact `set`/`dict` grows with every new page: about 400 MB for
+  2 hours here.  For the full day (49 million pages) the exact side would not
+  fit comfortably in memory, which is why the full run spills it to disk in
+  64 pieces (2.2 GB of temporary files) and why the class head node, with
+  4.9 GB of disk, could not run the exact side at all.
+- **Where time would win:** with data too big for one machine's memory, the
+  exact answer needs disk or a shuffle across the cluster (Hadoop), and that
+  is far slower than a sketch that fits in memory and can be merged.  The FM
+  Hadoop job below shuffles 98,304 register lines (24 x 4,096) instead of
+  135 million page lines.
 
 ## Desktop vs. class cluster
 
