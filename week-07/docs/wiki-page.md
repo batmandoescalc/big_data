@@ -92,7 +92,14 @@ access existed, while ordinary NetID HDFS writes still failed.
 The preferred next step is a one-time, bounded administrative creation of
 `/user/<student>` owned by that student. Later input uploads and jobs can then
 run as the NetID without disabling permissions or sharing the `hadoop`
-identity. The live FM job remains pending until that home is created.
+identity.
+
+That setup and the live FM validation were completed on November 4. YARN ran
+three data-local mappers and one reducer over 10,000 events. The mappers emitted
+384 register summaries and the reducer emitted 128 final registers. The Hadoop
+register array matched the local array exactly: both estimated 1,015.6266
+distinct users versus 1,000 exact. The bounded job succeeded in 27 seconds,
+and HDFS reported no missing replicas or corrupt blocks.
 
 See the repository [Week 7 README](https://github.com/batmandoescalc/big_data/blob/dev/week-07/README.md) for commands, test
 coverage, limitations, and reproduction details.

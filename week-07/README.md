@@ -139,7 +139,8 @@ On an authorized controller, after copying only the three Hadoop scripts to a
 temporary task directory, use a unique HDFS output directory:
 
 ```bash
-bash run-fm-hadoop.sh /user/USER/week-07/input/events.jsonl \
+HDFS_STAGING_DIR=/user/USER/.staging \
+  bash run-fm-hadoop.sh /user/USER/week-07/input/events.jsonl \
   /user/USER/week-07/output/fm-YYYYMMDD-HHMM 128
 ```
 
@@ -188,8 +189,17 @@ hdfs dfs -test -w "/user/$student"
 This bounded change does not disable HDFS permissions, modify shared datasets,
 or grant service-account access to later jobs. Each student should create only
 their own approved home, use unique output paths, and preserve the command and
-permission evidence. The live FM submission remains pending until this one-time
-home creation is coordinated and completed.
+permission evidence.
+
+The one-time home creation and a live FM validation were completed on November
+4. A 10,000-event input was divided into three HDFS files with replication two.
+YARN launched three data-local mappers and one reducer. The mappers reduced
+10,000 records to 384 register summaries; the reducer emitted 128 final
+registers. Those registers matched an independently computed local array
+exactly, producing the same estimate of 1,015.6266 for 1,000 exact distinct
+users. The job succeeded in 27 seconds, and the output path passed HDFS fsck
+with no missing replicas or corrupt blocks. Raw logs and account-specific paths
+remain uncommitted.
 
 ## Sharing the cluster safely
 
@@ -246,9 +256,8 @@ research question.
 - Synthetic events establish known truth but are not real user behavior.
 - These teaching implementations prioritize clarity over state-of-the-art
   estimators and production throughput.
-- The reported algorithm result is local. The cluster was healthy at the
-  read-only check, but the live run awaits creation of the student's HDFS home
-  using the already-confirmed VM administrator workflow.
+- The bounded synthetic FM result was reproduced through HDFS and YARN, but it
+  is a correctness demonstration rather than a throughput/scalability claim.
 - Repeated local timing measures this workstation only; it is not a Hadoop
   throughput or scalability claim.
 - Hadoop micro-batches incur startup overhead.  If low-latency continuous
