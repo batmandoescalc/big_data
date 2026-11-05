@@ -131,8 +131,9 @@ run on the class cluster gave identical estimates; see
 | AMS | Second moment F2 of views per page | 1.16742e13 | 1.16745e13 | 0.002% | 64 KB | 792 MB |
 | DGIM | Hot lines among the last 1,000,000 | 564 | 461 | 22.3% | 224 B | 125 KB |
 
-Run time for each row, sketch vs. exact: see
-[Run times: estimate vs. exact](#run-times-estimate-vs-exact).
+Run time for each row, sketch vs. exact: measured on 2 hours in
+[Run times: estimate vs. exact](#run-times-estimate-vs-exact), and predicted
+for this full day in [Predicted full day](#predicted-full-day-135-million-lines).
 
 What the numbers say:
 
@@ -192,6 +193,60 @@ What this shows:
   is far slower than a sketch that fits in memory and can be merged.  The FM
   Hadoop job below shuffles 98,304 register lines (24 x 4,096) instead of
   135 million page lines.
+
+### Predicted full day (135 million lines)
+
+We did not time each algorithm on the full day: the timing script holds
+every line in memory first, which for 135 million lines would need about
+30 GB.  Instead, [`scripts/project_full_day.py`](scripts/project_full_day.py)
+scales the 2-hour numbers up.  **These are predictions, not measurements.**
+Output: [`results/full-day-projection.json`](results/full-day-projection.json).
+
+| Algorithm | Sketch time | Exact time | Sketch memory | Exact memory |
+| --- | ---: | ---: | ---: | ---: |
+| Bloom | about 211 s | at least 20 s | 71.9 MB | about 3.2 GB |
+| FM | about 28 s | at least 19 s | under 0.1 MB | about 3.2 GB |
+| AMS | about 18 s | at least 54 s | 2.3 MB | about 4.0 GB |
+| DGIM | about 3 s | about 3 s | under 0.1 MB | 0.2 MB |
+
+Reading, parsing and hashing the full day, shared by every method, would add
+about 192 s (16.1 s x 11.9).
+
+How we got from 11.4 million lines to 135 million:
+
+- **Time: multiply by 11.9**, the ratio of lines (135,421,176 /
+  11,374,268).  Every method does a fixed amount of work per line, so time
+  should grow with lines.
+- **Sketch memory: unchanged.**  Each sketch's size is set before the data
+  arrives.  Bloom is the exception: it is sized for the number of keys, so we
+  use the 71.9 MB filter the full-day run actually built (sized for 60
+  million keys).
+- **Exact memory: from how Python grows a set or dict.**  The table doubles
+  (or quadruples) whenever it fills, and for a moment holds the old and new
+  table together.  Applying that rule to the full day's 49,476,423 distinct
+  pages (48,277,926 for Bloom's earlier hours) gives 3.2 GB for a set and
+  4.0 GB for a dict, counting only the table, not the page names.
+  DGIM's exact side only keeps hot lines inside the 1,000,000-line window,
+  so it stays small.
+
+We tested both rules on a third timing run over hours 21-23 (17,607,171
+lines, 1.55 times the lines of the 2-hour run;
+[`results/runtimes-3-hours.json`](results/runtimes-3-hours.json)):
+
+- The memory rule predicted 805.3 MB (set) and 1,006.6 MB (dict); we
+  measured 805.3 MB and 1,007.0 MB.  On 2 hours it predicted 402.7 MB and
+  503.3 MB; we measured 402.7 MB and 503.4 MB.
+- Sketch times grew 1.46 to 1.59 times, in step with lines.  DGIM's exact
+  side did too (1.54 times).
+- The set and dict exact times grew faster than lines: Bloom 1.66, AMS
+  1.77, FM 2.27 times.  Each resize copies the whole table, and bigger tables
+  miss the CPU cache more often.  So the full-day exact times above are a
+  floor; the real ones would likely be higher.
+
+What the prediction says: on the full day, the exact answers would need
+3 to 4 GB of memory each, more than the class head node's 5 GB of free memory
+can hold next to anything else, while the four sketches together stay under
+75 MB.
 
 ## Desktop vs. class cluster
 

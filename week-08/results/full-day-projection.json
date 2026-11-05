@@ -1,0 +1,65 @@
+{
+  "from_lines": 11374268,
+  "to_lines": 135421176,
+  "time_scale": 11.91,
+  "full_day_distinct_pages": 49476423,
+  "full_day_bloom_build_distinct_pages": 48277926,
+  "model_check_2_hours": {
+    "set_mb_model": 402.7,
+    "set_mb_measured": 402.7,
+    "dict_mb_model": 503.3,
+    "dict_mb_measured": 503.4
+  },
+  "check_against_larger_run": {
+    "lines_growth": 1.548,
+    "time_growth": {
+      "bloom": {
+        "sketch": 1.59,
+        "exact": 1.66
+      },
+      "fm": {
+        "sketch": 1.54,
+        "exact": 2.27
+      },
+      "ams": {
+        "sketch": 1.46,
+        "exact": 1.77
+      },
+      "dgim": {
+        "sketch": 1.53,
+        "exact": 1.54
+      }
+    },
+    "set_mb_model": 805.3,
+    "set_mb_measured": 805.3,
+    "dict_mb_model": 1006.6,
+    "dict_mb_measured": 1007.0
+  },
+  "projected": {
+    "bloom": {
+      "sketch_seconds": 211.0,
+      "exact_seconds": 20.0,
+      "sketch_mb": 71.9,
+      "exact_mb": 3221.2
+    },
+    "fm": {
+      "sketch_seconds": 27.6,
+      "exact_seconds": 19.4,
+      "sketch_mb": 0.0,
+      "exact_mb": 3221.2
+    },
+    "ams": {
+      "sketch_seconds": 17.9,
+      "exact_seconds": 54.3,
+      "sketch_mb": 2.3,
+      "exact_mb": 4026.5
+    },
+    "dgim": {
+      "sketch_seconds": 2.9,
+      "exact_seconds": 2.8,
+      "sketch_mb": 0.0,
+      "exact_mb": 0.2
+    }
+  },
+  "note": "Predicted, not measured. Sketch times scale with lines. Exact times are a floor: set/dict time grew faster than lines in the 3-hour check. Memory counts only the set/dict table, not the page names."
+}
