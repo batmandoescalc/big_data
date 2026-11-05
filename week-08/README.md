@@ -171,7 +171,7 @@ Laptop WSL2, Python 3.12.  Full output:
 | Bloom | 17.7 s | 1.7 s | 7.1 MB | 403 MB | 1.5% |
 | FM | 2.3 s | 1.6 s | under 0.1 MB | 403 MB | 0.7% |
 | AMS | 1.5 s | 4.6 s | 2.3 MB | 503 MB | 0.9% |
-| DGIM | 0.25 s | 0.24 s | under 0.1 MB | 0.2 MB | 3.9% |
+| DGIM | 0.24 s | 0.24 s | under 0.1 MB | 0.2 MB | 3.9% |
 
 What this shows:
 
@@ -179,13 +179,14 @@ What this shows:
   sketches are pure Python, so exact is as fast or faster for Bloom, FM and
   DGIM.  Bloom is slowest because each key sets 7 bits one at a time in a
   Python loop.  AMS is the one sketch faster than exact: it touches 4,096
-  counters, while exact grows a dictionary of 10 million pages.
+  counters, while exact grows a dictionary of 9.2 million pages.
 - **Memory is the win.**  The sketches stay at a few MB or less, fixed in
   advance.  The exact `set`/`dict` grows with every new page: about 400 MB for
   2 hours here.  For the full day (49 million pages) the exact side would not
   fit comfortably in memory, which is why the full run spills it to disk in
-  64 pieces (2.2 GB of temporary files) and why the class head node, with
-  4.9 GB of disk, could not run the exact side at all.
+  64 pieces (2.2 GB of temporary files).  On the class head node, with
+  4.9 GB of free disk, we ran only the sketches and reused the desktop's
+  exact answers.
 - **Where time would win:** with data too big for one machine's memory, the
   exact answer needs disk or a shuffle across the cluster (Hadoop), and that
   is far slower than a sketch that fits in memory and can be merged.  The FM
