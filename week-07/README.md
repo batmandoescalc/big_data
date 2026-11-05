@@ -147,18 +147,49 @@ The launcher refuses to overwrite existing output.  It must be run only after
 the health checks below.  No Hadoop configuration, provisioning script, or
 existing HDFS dataset is modified by this work.
 
-### Live-cluster status
+### Live-cluster status and HDFS identity finding
 
 On October 28, 2026, the read-only health check found three running YARN
 workers, no active applications, no missing or corrupt HDFS blocks, and ample
 free HDFS capacity. The attempted upload was correctly refused because the
-student account has no writable HDFS home or shared scratch directory. No
-MapReduce job was submitted. The only access needed for the future live
-demonstration is one student-writable HDFS directory beneath an
-administrator-approved project area. Matt did not create the HDFS permission
-model and is not assumed to control it. We need to identify or contact the
-cluster/HDFS administrator for this request; we will not bypass the permission
-model with `sudo` or the Hadoop service account.
+student account had no writable HDFS home or shared scratch directory. No
+MapReduce job was submitted.
+
+A November 4 follow-up separated VM administration from HDFS authorization.
+The NetID is already a passwordless `sudo` administrator on all four VMs, as
+the School of Computing confirmed, but HDFS permission checking is enabled and
+the NameNode runs as the `hadoop` service account. HDFS `/`, `/tmp`,
+`/datasets`, and `/results` are owned by `hadoop:supergroup` with mode `755`,
+and `/user` has not been created. Consequently, those roots are readable but
+not writable as the NetID. The same read-only probe run through
+`sudo -u hadoop` confirmed that the existing service account can write them.
+
+This is a setup decision in the original Week 2 workflow, not an SSH mistake:
+the installer created the `hadoop` service identity and started the NameNode
+under it, while the handoff documented `sudo -u hadoop bash -l` as the current
+administrative workflow. It did not provision separate HDFS home directories
+for students.
+
+The preferred correction is to use the existing VM administrator right once
+to create a private HDFS home, then submit ordinary jobs as the student rather
+than sharing the `hadoop` identity:
+
+```bash
+student="$(id -un)"
+sudo -u hadoop env STUDENT="$student" bash -lc '
+  source /etc/profile.d/hadoop.sh
+  hdfs dfs -mkdir -p "/user/$STUDENT"
+  hdfs dfs -chown "$STUDENT" "/user/$STUDENT"
+  hdfs dfs -chmod 700 "/user/$STUDENT"
+'
+hdfs dfs -test -w "/user/$student"
+```
+
+This bounded change does not disable HDFS permissions, modify shared datasets,
+or grant service-account access to later jobs. Each student should create only
+their own approved home, use unique output paths, and preserve the command and
+permission evidence. The live FM submission remains pending until this one-time
+home creation is coordinated and completed.
 
 ## Sharing the cluster safely
 
@@ -216,7 +247,8 @@ research question.
 - These teaching implementations prioritize clarity over state-of-the-art
   estimators and production throughput.
 - The reported algorithm result is local. The cluster was healthy at the
-  read-only check, but the live run awaits a student-writable HDFS directory.
+  read-only check, but the live run awaits creation of the student's HDFS home
+  using the already-confirmed VM administrator workflow.
 - Repeated local timing measures this workstation only; it is not a Hadoop
   throughput or scalability claim.
 - Hadoop micro-batches incur startup overhead.  If low-latency continuous

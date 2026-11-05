@@ -79,11 +79,20 @@ daemon health around a bounded job rather than intentionally crashing a VM.
 On October 28, the read-only health check found three running workers, no
 active applications, and no missing or corrupt HDFS blocks. The student
 account did not have a writable HDFS input directory, so the upload was
-correctly refused and no job was submitted. The next safe step is to obtain a
-student-owned HDFS project directory from the cluster/HDFS administrator. Matt
-did not create or control this permission model, so the administrator must be
-identified or contacted; we will not bypass permissions with the Hadoop
-service account.
+correctly refused and no job was submitted.
 
-See the repository [Week 7 README](../week-07/README.md) for commands, test
+A November 4 follow-up showed why. The NetID already has passwordless `sudo`
+administrator access on the VMs, but HDFS has a separate permission namespace.
+The NameNode runs as `hadoop`; the existing HDFS roots are owned by
+`hadoop:supergroup` with mode `755`; and `/user` does not exist. The original
+Week 2 setup intentionally used `sudo -u hadoop` for administration but did not
+create student HDFS homes. Therefore both observations were correct: VM admin
+access existed, while ordinary NetID HDFS writes still failed.
+
+The preferred next step is a one-time, bounded administrative creation of
+`/user/<student>` owned by that student. Later input uploads and jobs can then
+run as the NetID without disabling permissions or sharing the `hadoop`
+identity. The live FM job remains pending until that home is created.
+
+See the repository [Week 7 README](https://github.com/batmandoescalc/big_data/blob/dev/week-07/README.md) for commands, test
 coverage, limitations, and reproduction details.
