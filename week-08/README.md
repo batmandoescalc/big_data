@@ -197,16 +197,16 @@ What this shows:
 ### Predicted full day (135 million lines)
 
 We did not time each algorithm on the full day: the timing script holds
-every line in memory first, which for 135 million lines would need about
-30 GB.  Instead, [`scripts/project_full_day.py`](scripts/project_full_day.py)
+every line in memory first.  The 2-hour run peaked at 2.46 GB of resident
+memory, so 135 million lines would need about 29 GB (2.46 GB x 11.9).  Instead, [`scripts/project_full_day.py`](scripts/project_full_day.py)
 scales the 2-hour numbers up.  **These are predictions, not measurements.**
 Output: [`results/full-day-projection.json`](results/full-day-projection.json).
 
 | Algorithm | Sketch time | Exact time | Sketch memory | Exact memory |
 | --- | ---: | ---: | ---: | ---: |
-| Bloom | about 211 s | at least 20 s | 71.9 MB | about 3.2 GB |
-| FM | about 28 s | at least 19 s | under 0.1 MB | about 3.2 GB |
-| AMS | about 18 s | at least 54 s | 2.3 MB | about 4.0 GB |
+| Bloom | about 211 s | 20 s or more | 71.9 MB | about 3.2 GB |
+| FM | about 28 s | 19 s or more | under 0.1 MB | about 3.2 GB |
+| AMS | about 18 s | 54 s or more | 2.3 MB | about 4.0 GB |
 | DGIM | about 3 s | about 3 s | under 0.1 MB | 0.2 MB |
 
 Reading, parsing and hashing the full day, shared by every method, would add
@@ -240,13 +240,14 @@ lines, 1.55 times the lines of the 2-hour run;
   side did too (1.54 times).
 - The set and dict exact times grew faster than lines: Bloom 1.66, AMS
   1.77, FM 2.27 times.  Each resize copies the whole table, and bigger tables
-  miss the CPU cache more often.  So the full-day exact times above are a
-  floor; the real ones would likely be higher.
+  miss the CPU cache more often.  That trend comes from two runs, not a
+  proof, but it points the same way: the full-day set and dict exact times
+  above are likely low, so the table says "or more".
 
-What the prediction says: on the full day, the exact answers would need
-3 to 4 GB of memory each, more than the class head node's 5 GB of free memory
-can hold next to anything else, while the four sketches together stay under
-75 MB.
+What the prediction says: on the full day, the exact set or dict alone would
+need 3 to 4 GB, and the page names it points to come on top of that, so one
+in-memory exact answer would likely use more than the class head node's
+5 GB of free memory.  The four sketches together stay under 75 MB.
 
 ## Desktop vs. class cluster
 
