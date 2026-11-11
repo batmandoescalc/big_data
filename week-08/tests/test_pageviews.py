@@ -19,6 +19,7 @@ from dgim_study import week7_original_estimate  # noqa: E402
 from pageviews import (HashedBloom, HashedFM, WeightedAMS, fill_exact_from,  # noqa: E402
                        find_files, key_hash, parse_line, run)
 from streaming import DGIM, AMSSecondMoment, exact_second_moment  # noqa: E402
+from time_algorithms import measure  # noqa: E402
 
 # A three-hour toy day.  Hour 02 is the Bloom probe hour.
 TOY_DAY = {
@@ -318,6 +319,50 @@ class SkipExactTests(unittest.TestCase):
         self.assertEqual(set(result["algorithms"]), {"bloom", "fm", "ams", "dgim"})
         self.assertEqual(result["algorithms"]["fm"]["exact"], 2)
         self.assertIn("total", result["runtime_seconds"])
+
+
+class PerAlgorithmTimingTests(unittest.TestCase):
+    """Each sketch and exact method, run alone, gives the hand-checked toy-day answers."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.folder = Path(self.tmp.name) / "day"
+        self.work = Path(self.tmp.name) / "work"
+        self.folder.mkdir()
+        self.work.mkdir()
+        write_day(self.folder)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_alone_passes_match_hand_answers_and_the_combined_run(self):
+        files = find_files(self.folder, set(range(24)))
+        report = measure(files, self.work, threshold=3, window=9)
+        algos = report["algorithms"]
+        self.assertEqual((report["dataset"]["lines"], report["dataset"]["views"]), (9, 119))
+        self.assertEqual({name: row["exact_answer"] for name, row in algos.items()},
+                         {"bloom": 2, "fm": 6, "ams": 10093, "dgim": 4})
+        combined = run(files, hot_threshold=3, dgim_window=9, dgim_queries=(2, 9))
+        for name, row in algos.items():
+            self.assertEqual(row["estimate"], combined["algorithms"][name]["estimate"], name)
+            self.assertIsNotNone(row["error_pct"])
+            for side in ("sketch", "exact"):
+                self.assertGreater(row[side]["peak_rss_mb"], 0)
+                self.assertGreaterEqual(row[side]["pass_seconds"], 0)
+        self.assertEqual(list(self.work.iterdir()), [])  # partition files are removed
+
+    def test_command_line_writes_the_report_and_needs_two_hours(self):
+        output = Path(self.tmp.name) / "timing.json"
+        script = [sys.executable, str(SCRIPTS / "time_algorithms.py"),
+                  "--input-dir", str(self.folder), "--work-dir", str(self.work)]
+        subprocess.run([*script, "--output", str(output)], check=True, capture_output=True)
+        report = json.loads(output.read_text())
+        self.assertEqual(report["algorithms"]["fm"]["exact_answer"], 6)
+        self.assertEqual(set(report["baseline_read_parse_hash"]), {"first", "last"})
+        self.assertIn("python", report)
+        refused = subprocess.run([*script, "--hours", "01", "--output", str(output) + ".x"],
+                                 capture_output=True)
+        self.assertEqual(refused.returncode, 2)
 
 
 if __name__ == "__main__":
