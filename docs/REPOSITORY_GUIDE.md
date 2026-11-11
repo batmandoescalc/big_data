@@ -13,6 +13,7 @@ contains the full explanation, commands, evidence, and limitations.
 | 4 | Similar-item search | Can minhash and LSH find replayed transcript passages without comparing every pair? |
 | 5 | Scaling and join design | When does Hadoop's fixed overhead become small relative to useful work? |
 | 6 | Midsemester checkpoint | Can a new reader find, run, and understand the accumulated work? |
+| 7 | Mining data streams | Can a small fixed-size summary answer questions about a stream too large to keep? |
 
 ## Architecture and data flow
 
@@ -46,6 +47,8 @@ Typical experiment flow:
 | Wikipedia preparation | `week-05/scripts/prepare_wikipedia.py` | Streams compressed XML into nested, complete-record TSV samples while preserving Unicode. |
 | Benchmark matrix | `week-05/scripts/run-benchmark-matrix.sh` | Runs repeated SQLite/Hadoop measurements and exact comparisons at increasing sizes. |
 | Runtime summary | `week-05/scripts/summarize_runs.py` | Summarizes successful JSON records, retaining first runs and reporting medians. |
+| Streaming sketches | `week-07/scripts/streaming.py` | Bloom filter, Flajolet-Martin, AMS, and DGIM, each processing one event at a time and checked against an exact answer. |
+| Hadoop Flajolet-Martin | `week-07/scripts/hadoop/fm_mapper.py` and `fm_reducer.py` | Mappers build per-partition registers; the reducer merges them with `max`. |
 
 ## Key results
 
@@ -58,12 +61,15 @@ Typical experiment flow:
 | Buffer-free join | The Week 5 one-job replicated join reproduced all Apollo category totals and reduced observed Hadoop time from about 95 seconds to about 47 seconds. |
 | Scaling curve | Across authentic Wikipedia samples, every SQLite/Hadoop aggregate matched. The Hadoop/SQLite median ratio narrowed from 419.7x at 2 MiB to 1.09x at 2 GiB. |
 | Spark estimate | Spark would likely reduce repeated multi-stage overhead, but a cold Spark/YARN job would still have startup cost and is unlikely to beat SQLite on tiny input. |
+| Streaming sketches | On a 10,000-event stream with 1,000 users, Flajolet-Martin estimated 1,015.6 distinct users (1.56% error) in 128 bytes and AMS estimated the second moment within 0.22% in 1,024 bytes. |
 
 ## Where to go next
 
 - New reader: start with the root `README.md`, then select a weekly README.
   Keep the [glossary](GLOSSARY.md) open for unfamiliar terms.
 - Cluster operator: read `week-02/docs/cluster-setup.md` and the safety notes first.
-- Algorithm reader: use Weeks 3-5 and their tests as executable examples.
+- Algorithm reader: use Weeks 3-7 and their tests as executable examples.
+- Decision reader: `docs/adr/` records the design choices that span weeks.
+- Coding agent: start with the root `AGENTS.md`.
 - Results reviewer: use each weekly `Results` and `Runtime` section; generated
   data and private run logs intentionally stay outside Git.
