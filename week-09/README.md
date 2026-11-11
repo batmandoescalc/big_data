@@ -1,4 +1,4 @@
-﻿# Week 9: memory capacity and shared Hadoop jobs
+# Week 9: memory capacity and shared Hadoop jobs
 
 **November 11 closeout:** see [joint results and remaining work](docs/concurrency-results.md). Eight jobs succeeded across both accounts; the thirty-submission attempt ended with 16 successes and 14 cancellations after the RAM guard. No further stress runs are planned.
 
@@ -259,4 +259,3 @@ experiment application. No unit test contacts the cluster.
 This branch starts from dev and adds Week 9 only. It does not incorporate Max's
 unmerged Week 8 DGIM changes or Noah's separate Week 7 documentation correction;
 the FM code used here is unchanged by either. Keep both earlier branches intact.
-

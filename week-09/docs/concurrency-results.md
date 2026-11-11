@@ -1,4 +1,4 @@
-﻿# November 11: two-user Hadoop results
+# November 11: two-user Hadoop results
 
 No more stress runs are planned. Evidence: [joint-session-summary.json](../results/joint-session-summary.json).
 
@@ -32,4 +32,3 @@ Final snapshot: zero active applications, three active workers, about 5.5 GiB co
 Noah's experimental evidence is ready for review: capped memory and VM estimates, successful two-user work, and effects/failure of thirty submissions. No separate bandwidth benchmark is required by issue #24. Matt can decide whether he wants a later repeat.
 
 Max owns the four-algorithm comparison and year of Wikipedia data and should confirm completion with evidence. Both students should review and explain the write-up. PR #25 remains draft and unmerged. The late-ID abort-cleanup limitation must be fixed before future large bursts; no additional runs are planned now.
-

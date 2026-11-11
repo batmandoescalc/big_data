@@ -1,4 +1,4 @@
-﻿# Week 9: Memory Capacity and Shared Hadoop Jobs
+# Week 9: Memory Capacity and Shared Hadoop Jobs
 
 Results are ready for review; no further stress runs are planned.
 
@@ -12,4 +12,3 @@ Each job reads 10,000 generated click events in three HDFS files. Three mappers 
 - Closeout: zero active applications, three active workers. Inputs, results and failed attempts are preserved; cluster configuration is unchanged.
 
 Noah's experiments are ready for review. Max separately owns the four-algorithm comparison and year of Wikipedia data. PR #25 remains draft.
-
