@@ -1,13 +1,26 @@
 {
   "date": "2026-11-11",
-  "provenance": "Saved normal-user YARN REST snapshots, Noah launcher manifests, and separately attributed Max meeting notes; raw account/host evidence remains ignored.",
+  "provenance": "Normal-user YARN REST snapshots, each account's launcher manifests, and measurements each student took from their own account. Account A is the pull request author. Raw account and host evidence stays in the ignored runtime/ directory.",
+  "one_job_each_round": {
+    "submitted": 2,
+    "succeeded": 2,
+    "outputs_matched": 2,
+    "note": "Successful round. Earlier interrupted attempts are described in the README. No timings were kept for this summary."
+  },
+  "two_jobs_each_round": {
+    "submitted": 4,
+    "succeeded": 4,
+    "outputs_matched": 4,
+    "note": "Successful round. No timings were kept for this summary."
+  },
   "eight_job_round": {
     "submitted": 8,
     "participants": 2,
     "jobs_per_participant": 4,
     "all_yarn_jobs_succeeded": true,
-    "noah_outputs_exactly_matched": 4,
-    "max_output_equality": "Not independently checked by this report; obtain Max input/output evidence.",
+    "account_a_outputs_matched": 4,
+    "account_b_outputs_matched": 4,
+    "output_check": "Each account checked its own reducer outputs against the expected 128 registers.",
     "max_observed_running_applications": 2,
     "max_observed_pending_applications": 6,
     "peak_allocated_vcores": 6,
@@ -15,78 +28,84 @@
     "cluster_vcores": 6,
     "cluster_memory_mib": 12288,
     "scheduled_start_to_last_finish_seconds": 165.5680000782013,
+    "account_b_wait_before_launch_seconds": [
+      72.5,
+      94.0,
+      107.4,
+      118.2
+    ],
     "applications": [
       {
-        "participant": "Noah",
+        "account": "account A",
         "application_id": "application_1794390829908_0016",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 17.63599991798401,
         "rm_submission_to_finish_seconds": 28.193,
-        "noah_output_equality_verified": true,
+        "output_matched": true,
         "observed_am_wait_from_client_seconds": 32.273221015930176,
         "client_turnaround_seconds": 48.81939148902893
       },
       {
-        "participant": "Noah",
+        "account": "account A",
         "application_id": "application_1794390829908_0017",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 17.598000049591064,
         "rm_submission_to_finish_seconds": 25.92,
-        "noah_output_equality_verified": true,
+        "output_matched": true,
         "observed_am_wait_from_client_seconds": 32.28515815734863,
         "client_turnaround_seconds": 46.284026861190796
       },
       {
-        "participant": "Noah",
+        "account": "account A",
         "application_id": "application_1794390829908_0018",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 18.717000007629395,
         "rm_submission_to_finish_seconds": 66.173,
-        "noah_output_equality_verified": true,
+        "output_matched": true,
         "observed_am_wait_from_client_seconds": 70.61016941070557,
         "client_turnaround_seconds": 86.88829398155212
       },
       {
-        "participant": "Noah",
+        "account": "account A",
         "application_id": "application_1794390829908_0019",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 18.45199990272522,
         "rm_submission_to_finish_seconds": 87.785,
-        "noah_output_equality_verified": true,
+        "output_matched": true,
         "observed_am_wait_from_client_seconds": 80.96928858757019,
         "client_turnaround_seconds": 107.891286611557
       },
       {
-        "participant": "Max",
+        "account": "account B",
         "application_id": "application_1794390829908_0020",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 19.270999908447266,
         "rm_submission_to_finish_seconds": 100.713,
-        "noah_output_equality_verified": null
+        "output_matched": true
       },
       {
-        "participant": "Max",
+        "account": "account B",
         "application_id": "application_1794390829908_0021",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 19.256999969482422,
         "rm_submission_to_finish_seconds": 111.505,
-        "noah_output_equality_verified": null
+        "output_matched": true
       },
       {
-        "participant": "Max",
+        "account": "account B",
         "application_id": "application_1794390829908_0022",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 19.283999919891357,
         "rm_submission_to_finish_seconds": 135.343,
-        "noah_output_equality_verified": null
+        "output_matched": true
       },
       {
-        "participant": "Max",
+        "account": "account B",
         "application_id": "application_1794390829908_0023",
         "final_status": "SUCCEEDED",
         "accepted_after_scheduled_start_seconds": 19.35199999809265,
         "rm_submission_to_finish_seconds": 146.216,
-        "noah_output_equality_verified": null
+        "output_matched": true
       }
     ]
   },
@@ -95,226 +114,263 @@
     "am_memory_limit_mib": 2048,
     "interpretation": "FIFO configuration and consecutive per-user IDs fit submission-order queueing. Fully allocated vcores alone do not prove CPU is the sole bottleneck; application-manager admission is also constrained."
   },
+  "twenty_job_attempt": {
+    "submitted": 20,
+    "participants": 2,
+    "jobs_per_participant": 10,
+    "reached_yarn": 0,
+    "outcome": "No job from either account reached YARN.",
+    "cause": "The launcher opened one SSH connection per job. The controller reset the connections, consistent with the SSH server's limit on simultaneous unauthenticated connections.",
+    "client_error": "kex_exchange_identification: Connection reset by peer",
+    "server_log": "Account A found MaxStartups throttling in the controller sshd log at that time (effective setting 10:30:60)."
+  },
   "thirty_job_attempt": {
     "submitted": 30,
     "participants": 2,
     "jobs_per_participant": 15,
-    "outcome": "Interrupted experiment after RAM guard; not 30 successful completions",
+    "reached_yarn": 30,
+    "succeeded": 16,
+    "cancelled": 14,
+    "outcome": "Interrupted experiment: both launchers' RAM guards fired. Not 30 successful completions.",
     "guard_message": "VM available RAM below 2 GiB, or unavailable",
     "guard_measurement_limitation": "The launcher did not retain the triggering node or exact MemAvailable value.",
-    "controller_followup_after_abort": {
-      "available_memory_mib": 3121,
-      "swap_used_mib": 107,
-      "one_minute_load": 12.31
-    },
-    "controller_followup_after_own_cleanup": {
-      "available_memory_mib": 5692,
-      "swap_used_mib": 86
-    },
-    "counts_by_participant": {
-      "Noah": {
+    "counts_by_account": {
+      "account A": {
         "SUCCEEDED": 1,
         "KILLED": 14
       },
-      "Max": {
+      "account B": {
         "SUCCEEDED": 15
       }
     },
+    "account_a": {
+      "guard_fired": true,
+      "cleanup": "The first cancellation missed application IDs that arrived late. A second pass matched the exact stage names and owner and cancelled the 14 remaining applications.",
+      "controller_followup_after_abort": {
+        "available_memory_mib": 3121,
+        "swap_used_mib": 107,
+        "one_minute_load": 12.31
+      },
+      "controller_followup_after_own_cleanup": {
+        "available_memory_mib": 5692,
+        "swap_used_mib": 86
+      }
+    },
+    "account_b": {
+      "guard_fired": true,
+      "cleanup": "Failed. The launcher aborted but cancelled none of its 15 applications, and its 15 job client processes kept running on the controller until they were stopped by hand. The 15 applications ran to completion.",
+      "reached_yarn_after_start_seconds": [
+        52.4,
+        57.9
+      ],
+      "longest_queue_wait_seconds": 274.4,
+      "last_finish_after_start_seconds": 389.2,
+      "succeeded": 15,
+      "outputs_matched": 15,
+      "output_check": "Checked by hand after the run, because the aborted launcher skips its own check. Each output was read with hdfs dfs -cat and compared with the expected 128 registers using the launcher's canonical-register comparison. All 15 matched."
+    },
+    "controller_memory": {
+      "source": "controller-memory-fifteen-each.txt",
+      "available_mb_idle_before_round": 5655,
+      "available_mb_at_start_of_fall": 3454,
+      "available_mb_minimum": 351,
+      "fall_seconds": 46,
+      "swap_used_mb_at_minimum": 260,
+      "highest_one_minute_load_recorded": 31.66,
+      "job_client_memory_mb_each": 209,
+      "fifteen_job_clients_memory_mb": 3137,
+      "recovery": "About 5.8 GB available again within about 6 minutes. About 86 MB of swap was still marked used then, and 82 MB two hours later.",
+      "workers": "The three workers stayed healthy."
+    },
+    "per_application_times": "fifteen-each-applications.json",
     "applications": [
       {
         "application_id": "application_1794390829908_0024",
-        "participant": "Noah",
+        "account": "account A",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0025",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0026",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0027",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0028",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0029",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0030",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0031",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0032",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0033",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0034",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0035",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0036",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0037",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0038",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0039",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0040",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0041",
-        "participant": "Max",
+        "account": "account B",
         "state": "FINISHED",
         "final_status": "SUCCEEDED"
       },
       {
         "application_id": "application_1794390829908_0042",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0043",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0044",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0045",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0046",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0047",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0048",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0049",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0050",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0051",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0052",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       },
       {
         "application_id": "application_1794390829908_0053",
-        "participant": "Noah",
+        "account": "account A",
         "state": "KILLED",
         "final_status": "KILLED"
       }
-    ],
-    "cleanup": "14 matching Noah stage applications canceled after late-arriving IDs escaped the initial cancellation snapshot. Max applications were untouched."
+    ]
   },
-  "max_reported_notes": {
-    "source": "Summary pasted by Noah from Max at 3:36 p.m.; these timing claims are separately attributed.",
-    "execution_under_40_seconds": true,
-    "last_job_wait_seconds": 118,
-    "linear_20_seconds_per_job": "Small-sample prediction only; the 30-job memory interruption does not validate linear scaling."
-  },
-  "closeout": {
+  "prediction_note": "From the 8-job round, account B estimated about 20 seconds of extra waiting per extra job. This is a small-sample prediction. The interrupted 30-job round does not test it.",
+  "after_session_snapshot": {
     "active_applications": 0,
     "active_nodes": 3,
     "controller_available_memory_mib": 5647.328125,
-    "controller_swap_used_mib": 86.25,
-    "new_experiments_planned": false
+    "controller_swap_used_mib": 86.25
   }
 }
