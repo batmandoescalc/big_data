@@ -82,8 +82,9 @@ needs from that single hash, because 24 separate hashes per line (as the Week
   over a run of zero bits in one step instead of 135 million single calls.
   Window N = 1,000,000 lines over all 24 hours.
 
-The exact answers need every distinct key, 49 million, which would
-need several GB in a Python dict.  Instead the run writes (hash, views) pairs
+The exact answers need every distinct key, 49 million.  One Python set or
+dict holding all of them would need several GB (not run; this is the reason
+for partitioning).  Instead the run writes (hash, views) pairs
 to 64 partition files by the top 6 hash bits (16 bytes per line, about 2.2 GB of temporary disk)
 and totals one partition at a time.  Keys are compared by their 64-bit hash;
 with about 5e7 keys the chance of any collision is about n^2/2^65, roughly
@@ -115,25 +116,56 @@ match a desktop run number for number.
 
 ## Results: full day 2026-10-27
 
-Run on a 16-core WSL2 workstation (Linux 6.6, Python 3.14.4), one process,
-pure Python: 308 s for one streaming pass with all four
-sketches, plus 15 s for the exact answers; 323 s wall clock, peak resident
-memory 305 MB.  (A first run, before switching DGIM to `DGIMReduced`, took
-330 s and gave identical numbers.)  Full output:
+One run on one machine gives the accuracy, time and memory of every row:
+[`scripts/time_algorithms.py`](scripts/time_algorithms.py) on a laptop (WSL2,
+16 cores, Python 3.12.3).  Each sketch and each exact method makes its own
+streaming pass over the 24 gzip files, alone in a fresh process, one after
+another.  Nothing holds the day in memory.  Time is that pass's wall clock.
+Memory is the peak resident memory the operating system reports for that
+process.  Each pass ran once.  Full output:
+[`results/full-day-per-algorithm.json`](results/full-day-per-algorithm.json).
+
+| Algorithm | Estimate | Exact | Error | Sketch time | Exact time | Sketch peak memory | Exact peak memory |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Bloom | 4,258,683 | 4,254,618 | 0.10% | 506 s | 221 s | 87 MB | 142 MB |
+| FM | 51,087,463 | 49,476,423 | 3.26% | 219 s | 237 s | 19 MB | 144 MB |
+| AMS | 1.16742e13 | 1.16745e13 | 0.002% | 217 s | 257 s | 21 MB | 174 MB |
+| DGIM | 564 | 461 | 22.3% | 186 s | 188 s | 19 MB | 19 MB |
+
+The questions are in [Why this data fits each algorithm](#why-this-data-fits-each-algorithm).
+
+How to read it:
+
+- **Every pass pays to read the data.**  A pass that only reads, parses and
+  hashes took 185 s at the start of the run and 189 s at the end, and peaked
+  at 19 MB.  Subtract about 187 s to see what a method adds: about 30 s for
+  FM and AMS, about 320 s for Bloom, and nothing we can measure for DGIM
+  (its 186 s is inside the 4 s gap between the two baseline passes).
+- **The exact side is the method we actually run at full scale.**  Bloom, FM
+  and AMS write each line's hash to 64 partition files on disk, then total
+  one partition at a time.  That adds 1.1 to 2.2 GB of temporary disk and
+  keeps memory near 150 MB.  Exact DGIM keeps the positions of the hot lines
+  inside the window, which is tiny.
+- **Read this table for memory, not speed.**  The single-machine exact side
+  uses Python's C-backed `set` and `dict` while the sketches are pure Python,
+  so the time columns mostly measure the language.  The fair speed comparison
+  is the pair of Hadoop jobs, FM and an exact count over the same input
+  ([`scripts/hadoop/run-distinct-cluster.sh`](scripts/hadoop/run-distinct-cluster.sh)).
+- **Memory is the win.**  19 MB is what any Python process here needs, so
+  FM, AMS and DGIM add almost nothing: their summaries are 4 KB, 64 KB and
+  224 bytes.  Bloom adds its 71.9 MB bit array.  The exact side needs about
+  125 to 155 MB more than the baseline even after moving most of the work to
+  disk, and its disk use grows with the data; the sketches do not grow.
+- **Bloom is the slow sketch** because each key sets 7 bits one at a time in
+  a Python loop.
+
+The detail below (false positives, hourly DGIM checks) comes from the
+combined run, `scripts/run_pageviews.py`: all four sketches in one pass, then
+the exact answers from the partition files.  Its estimates and exact answers
+are the same numbers as the table above.  Full output:
 [`results/desktop-full-day.json`](results/desktop-full-day.json).  The same
-run on the class cluster gave identical estimates; see
+code on the class cluster gave identical estimates; see
 [Desktop vs. class cluster](#desktop-vs-class-cluster).
-
-| Algorithm | Question | Estimate | Exact | Error | Sketch memory | Exact memory (logical) |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Bloom | Hour-23 pages already seen earlier that day | 4,258,683 | 4,254,618 | 0.10% | 71.9 MB | 386 MB |
-| FM | Distinct pages in the day | 51,087,463 | 49,476,423 | 3.26% | 4 KB | 396 MB |
-| AMS | Second moment F2 of views per page | 1.16742e13 | 1.16745e13 | 0.002% | 64 KB | 792 MB |
-| DGIM | Hot lines among the last 1,000,000 | 564 | 461 | 22.3% | 224 B | 125 KB |
-
-Run time for each row, sketch vs. exact: measured on 2 hours in
-[Run times: estimate vs. exact](#run-times-estimate-vs-exact), and predicted
-for this full day in [Predicted full day](#predicted-full-day-135-million-lines).
 
 What the numbers say:
 
@@ -156,99 +188,6 @@ What the numbers say:
   The stream order is dump order (sorted by wiki and title within each hour),
   not the order views happened.
 
-### Run times: estimate vs. exact
-
-The full-day pass runs all four sketches together, so it has one combined
-time (308 s).  To time each row on its own,
-[`scripts/time_algorithms.py`](scripts/time_algorithms.py) loads hours 22-23
-(11,374,268 lines) into memory once, then runs each sketch and each exact
-method alone over the same stream, 3 times each, keeping the fastest.
-Reading, parsing and hashing (16 s, shared by every method) is not counted.
-Laptop WSL2, Python 3.12.  Full output:
-[`results/runtimes-2-hours.json`](results/runtimes-2-hours.json).
-
-| Algorithm | Sketch time | Exact time | Sketch peak memory | Exact peak memory | Error |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Bloom | 17.7 s | 1.7 s | 7.1 MB | 403 MB | 1.5% |
-| FM | 2.3 s | 1.6 s | under 0.1 MB | 403 MB | 0.7% |
-| AMS | 1.5 s | 4.6 s | 2.3 MB | 503 MB | 0.9% |
-| DGIM | 0.24 s | 0.24 s | under 0.1 MB | 0.2 MB | 3.9% |
-
-What this shows:
-
-- **Time is not the win here.**  Python's `set` and `dict` run in C, and our
-  sketches are pure Python, so exact is as fast or faster for Bloom, FM and
-  DGIM.  Bloom is slowest because each key sets 7 bits one at a time in a
-  Python loop.  AMS is the one sketch faster than exact: it touches 4,096
-  counters, while exact grows a dictionary of 9.2 million pages.
-- **Memory is the win.**  The sketches stay at a few MB or less, fixed in
-  advance.  The exact `set`/`dict` grows with every new page: about 400 MB for
-  2 hours here.  For the full day (49 million pages) the exact side would not
-  fit comfortably in memory, which is why the full run spills it to disk in
-  64 pieces (2.2 GB of temporary files).  On the class head node, with
-  4.9 GB of free disk, we ran only the sketches and reused the desktop's
-  exact answers.
-- **Where time would win:** with data too big for one machine's memory, the
-  exact answer needs disk or a shuffle across the cluster (Hadoop), and that
-  is far slower than a sketch that fits in memory and can be merged.  The FM
-  Hadoop job below shuffles 98,304 register lines (24 x 4,096) instead of
-  135 million page lines.
-
-### Predicted full day (135 million lines)
-
-We did not time each algorithm on the full day: the timing script holds
-every line in memory first.  The 2-hour run peaked at 2.46 GB of resident
-memory, so 135 million lines would need about 29 GB (2.46 GB x 11.9).  Instead, [`scripts/project_full_day.py`](scripts/project_full_day.py)
-scales the 2-hour numbers up.  **These are predictions, not measurements.**
-Output: [`results/full-day-projection.json`](results/full-day-projection.json).
-
-| Algorithm | Sketch time | Exact time | Sketch memory | Exact memory |
-| --- | ---: | ---: | ---: | ---: |
-| Bloom | about 211 s | 20 s or more | 71.9 MB | about 3.2 GB |
-| FM | about 28 s | 19 s or more | under 0.1 MB | about 3.2 GB |
-| AMS | about 18 s | 54 s or more | 2.3 MB | about 4.0 GB |
-| DGIM | about 3 s | about 3 s | under 0.1 MB | 0.2 MB |
-
-Reading, parsing and hashing the full day, shared by every method, would add
-about 192 s (16.1 s x 11.9).
-
-How we got from 11.4 million lines to 135 million:
-
-- **Time: multiply by 11.9**, the ratio of lines (135,421,176 /
-  11,374,268).  Every method does a fixed amount of work per line, so time
-  should grow with lines.
-- **Sketch memory: unchanged.**  Each sketch's size is set before the data
-  arrives.  Bloom is the exception: it is sized for the number of keys, so we
-  use the 71.9 MB filter the full-day run actually built (sized for 60
-  million keys).
-- **Exact memory: from how Python grows a set or dict.**  The table doubles
-  (or quadruples) whenever it fills, and for a moment holds the old and new
-  table together.  Applying that rule to the full day's 49,476,423 distinct
-  pages (48,277,926 for Bloom's earlier hours) gives 3.2 GB for a set and
-  4.0 GB for a dict, counting only the table, not the page names.
-  DGIM's exact side only keeps hot lines inside the 1,000,000-line window,
-  so it stays small.
-
-We tested both rules on a third timing run over hours 21-23 (17,607,171
-lines, 1.55 times the lines of the 2-hour run;
-[`results/runtimes-3-hours.json`](results/runtimes-3-hours.json)):
-
-- The memory rule predicted 805.3 MB (set) and 1,006.6 MB (dict); we
-  measured 805.3 MB and 1,007.0 MB.  On 2 hours it predicted 402.7 MB and
-  503.3 MB; we measured 402.7 MB and 503.4 MB.
-- Sketch times grew 1.46 to 1.59 times, in step with lines.  DGIM's exact
-  side did too (1.54 times).
-- The set and dict exact times grew faster than lines: Bloom 1.66, AMS
-  1.77, FM 2.27 times.  Each resize copies the whole table, and bigger tables
-  miss the CPU cache more often.  That trend comes from two runs, not a
-  proof, but it points the same way: the full-day set and dict exact times
-  above are likely low, so the table says "or more".
-
-What the prediction says: on the full day, the exact set or dict alone would
-need 3 to 4 GB, and the page names it points to come on top of that, so one
-in-memory exact answer would likely use more than the class head node's
-5 GB of free memory.  The four sketches together stay under 75 MB.
-
 ## Desktop vs. class cluster
 
 The same day was copied to the class head node (24 files, SHA-256 checked
@@ -259,13 +198,10 @@ temporary partition files) and copied the exact answers from the desktop run
 with `--exact-from`.  It ran with `nice -n 19` under a 2 GB memory limit, one
 process, and the head node's load stayed near 1 of 4 cores.
 
-| | Desktop (WSL2) | Class head node |
-| --- | --- | --- |
-| Python | 3.14.4 | 3.9.25 |
-| Four-sketch pass over 135 million lines | 308 s | 855 s (14 min 15 s) |
-| Exact answers | 15 s (on disk partitions) | copied from the desktop run |
-| Peak memory | 305 MB (sketches plus exact pass) | 92 MB (sketches only) |
-| Bloom / FM / AMS / DGIM estimates | 4,258,683 / 51,087,463 / 1.16742e13 / 564 | identical |
+All four estimates on the head node (Bloom 4,258,683, FM 51,087,463, AMS
+1.16742e13, DGIM 564) are identical to the desktop's.  We do not compare the
+two machines' speed: they ran different Python versions on different core
+counts, and the head-node run was throttled on purpose.
 
 Identical estimates are expected: the seeds are fixed and the hash is
 BLAKE2b, which does not change between machines or Python versions.  The
