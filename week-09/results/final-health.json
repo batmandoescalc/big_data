@@ -1,0 +1,16 @@
+{
+  "date": "2026-11-10",
+  "scope": "post-experiment checks",
+  "running_yarn_workers": 3,
+  "active_yarn_applications": 0,
+  "experiment_hdfs_fsck": "HEALTHY",
+  "experiment_missing_blocks": 0,
+  "experiment_corrupt_blocks": 0,
+  "experiment_missing_replicas": 0,
+  "worker_datanode_service": "active/running",
+  "worker_nodemanager_service": "active/running",
+  "worker_swap_used_mib": 0,
+  "global_hdfs_missing_blocks": 0,
+  "global_hdfs_corrupt_blocks": 0,
+  "limitation": "Normal-user dfsadmin report returned aggregate health but denied administrative per-DataNode details. Raw host/account logs remain private."
+}

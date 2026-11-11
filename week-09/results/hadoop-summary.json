@@ -1,0 +1,146 @@
+{
+  "accounts": 1,
+  "records_per_job": 10000,
+  "registers": 128,
+  "note": "Same-account applications; not a multi-user scheduling experiment. Single stage per count; polling/SSH overhead affects observed times.",
+  "stages": [
+    {
+      "jobs": 1,
+      "submitted_spread_seconds": 0.0,
+      "total_stage_seconds": 51.14354109764099,
+      "median_client_turnaround_seconds": 51.14354109764099,
+      "max_observed_running": 1,
+      "max_observed_accepted": 1,
+      "successful_outputs": 1,
+      "applications": [
+        {
+          "application_id": "application_1793785700803_0002",
+          "client_turnaround_seconds": 51.14354109764099,
+          "observed_am_wait_seconds": 22.959513902664185,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        }
+      ]
+    },
+    {
+      "jobs": 2,
+      "submitted_spread_seconds": 0.018549442291259766,
+      "total_stage_seconds": 47.00850057601929,
+      "median_client_turnaround_seconds": 46.99922585487366,
+      "max_observed_running": 2,
+      "max_observed_accepted": 2,
+      "successful_outputs": 2,
+      "applications": [
+        {
+          "application_id": "application_1793785700803_0003",
+          "client_turnaround_seconds": 47.00850057601929,
+          "observed_am_wait_seconds": 23.688998222351074,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        },
+        {
+          "application_id": "application_1793785700803_0004",
+          "client_turnaround_seconds": 46.98995113372803,
+          "observed_am_wait_seconds": 23.670448780059814,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        }
+      ]
+    },
+    {
+      "jobs": 4,
+      "submitted_spread_seconds": 0.05548238754272461,
+      "total_stage_seconds": 86.43501615524292,
+      "median_client_turnaround_seconds": 59.86805713176727,
+      "max_observed_running": 2,
+      "max_observed_accepted": 4,
+      "successful_outputs": 4,
+      "applications": [
+        {
+          "application_id": "application_1793785700803_0008",
+          "client_turnaround_seconds": 86.43501615524292,
+          "observed_am_wait_seconds": 61.13927674293518,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        },
+        {
+          "application_id": "application_1793785700803_0005",
+          "client_turnaround_seconds": 43.531615018844604,
+          "observed_am_wait_seconds": 25.50902271270752,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        },
+        {
+          "application_id": "application_1793785700803_0006",
+          "client_turnaround_seconds": 45.996602296829224,
+          "observed_am_wait_seconds": 25.490158319473267,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        },
+        {
+          "application_id": "application_1793785700803_0007",
+          "client_turnaround_seconds": 73.73951196670532,
+          "observed_am_wait_seconds": 51.18368339538574,
+          "final_status": "SUCCEEDED",
+          "registers_match": true,
+          "output_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+          "counters": {
+            "Map input records": 10000,
+            "Map output records": 384,
+            "Reduce output records": 128,
+            "Launched map tasks": 3,
+            "Launched reduce tasks": 1
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -7,10 +7,10 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 7 adds local, reproducible Chapter 4 streaming-algorithm experiments and
-a bounded Hadoop Flajolet--Martin design. Start with the
+Week 9 measures capped memory growth and prepares controlled shared Hadoop
+submissions, building on Week 7's streaming sketches. Start with the
 [repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
-functions and results, or [Week 7](week-07/README.md) for the newest work.
+functions and results, or [Week 9](week-09/README.md) for the newest work.
 
 ## Getting started
 
@@ -78,6 +78,8 @@ See [the cluster setup notes](week-02/docs/cluster-setup.md).
   chosen for Hadoop because partition-local trailing-zero registers merge
   exactly with a small, associative `max` operation; AMS and DGIM require
   global sampling or ordering that basic MapReduce does not preserve.
+- [Week 9](week-09/README.md): capped exact-state memory failures, bounded FM
+  memory, verified Hadoop bursts, and a synchronized two-user experiment launcher.
 
 Each week's overview is its `README.md`; supporting material lives under that
 week's `docs/`, `scripts/`, and `tests/` directories as needed. Ignored `data/`
