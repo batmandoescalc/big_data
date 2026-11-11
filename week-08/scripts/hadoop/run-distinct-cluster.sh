@@ -70,6 +70,8 @@ counter() {
 # run_job NAME FILES MAPPER REDUCER FINISH_SCRIPT
 # Both jobs go through this one command, so their settings cannot differ:
 # same reducer count, the cluster's own memory settings, no speculative tasks.
+# Students can only write inside their own HDFS home, so YARN's staging
+# folder is pointed there (issue #19).
 run_job() {
   local name=$1 files=$2 mapper=$3 reducer=$4 finish=$5
   local log="$results_dir/$name-job.log" started seconds answer
@@ -77,6 +79,7 @@ run_job() {
   hadoop jar "${jars[0]}" \
     -D mapreduce.framework.name=yarn \
     -D mapreduce.job.name="week08-distinct-$name" \
+    -D yarn.app.mapreduce.am.staging-dir="/user/$USER/.staging" \
     -D mapreduce.job.reduces="$reducers" \
     -D mapreduce.map.speculative=false \
     -D mapreduce.reduce.speculative=false \
