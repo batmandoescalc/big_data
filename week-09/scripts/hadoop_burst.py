@@ -24,6 +24,7 @@ TRANSPORT = None
 SSH_KEY = None
 REMOTE_ROOT = None
 HADOOP_HOME = None
+SSH_READY = '__WEEK09_SSH_READY__'
 sys.path.insert(0, str(ROOT / 'week-07/scripts'))
 from event_generator import generate_events
 from streaming import FlajoletMartin
@@ -43,6 +44,25 @@ def execution(command):
     if TRANSPORT:
         return ssh_prefix() + [TRANSPORT, 'source /etc/profile.d/hadoop.sh; exec ' + shlex.join(command)]
     return command
+
+
+def job_execution(command):
+    if TRANSPORT:
+        # Signal completed authentication before the parent opens another
+        # connection. This avoids sshd MaxStartups without serializing jobs.
+        remote = ('source /etc/profile.d/hadoop.sh; printf ' +
+                  shlex.quote(SSH_READY + '\n') + '; exec ' + shlex.join(command))
+        return ssh_prefix() + [TRANSPORT, remote]
+    return command
+
+
+def wait_for_authentication(process, ready, timeout=15):
+    deadline = time.monotonic() + timeout
+    while not ready.wait(.1):
+        if process.poll() is not None:
+            raise RuntimeError('job SSH connection exited before authentication acknowledgement; inspect job log')
+        if time.monotonic() >= deadline:
+            raise TimeoutError('job SSH authentication acknowledgement timed out')
 
 
 def run(command):
@@ -250,9 +270,13 @@ def launch(args):
     seen_ids = set()
     snapshots = (args.evidence / 'observations.jsonl').open('w')
 
-    def read_log(process, row):
+    def read_log(process, row, ready):
         with (args.evidence / f'job-{row["index"]}.log').open('w') as log:
             for line in process.stdout:
+                if line.strip() == SSH_READY:
+                    row['ssh_authenticated_epoch'] = clock()
+                    ready.set()
+                    continue
                 log.write(line)
                 log.flush()
                 match = re.search(r'application_\d+_\d+', line)
@@ -275,12 +299,16 @@ def launch(args):
             time.sleep(max(0, min(.1, target - clock())))
         for row in rows:
             row['submitted_epoch'] = clock()
-            process = subprocess.Popen(execution(row['command']), stdout=subprocess.PIPE,
+            process = subprocess.Popen(job_execution(row['command']), stdout=subprocess.PIPE,
                                        stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
             processes.append(process)
-            reader = threading.Thread(target=read_log, args=(process, row), daemon=True)
+            ready = threading.Event()
+            reader = threading.Thread(target=read_log, args=(process, row, ready), daemon=True)
             reader.start()
             readers.append(reader)
+            if TRANSPORT:
+                wait_for_authentication(process, ready)
+                print(f'Job {row["index"]}: SSH authenticated; submission client running.', flush=True)
         last_health = 0
         while True:
             now = clock()

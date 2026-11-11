@@ -215,6 +215,19 @@ and neither run had a monitoring timeout or retry. The stages took about
 same-account runs, not replacement data for the interrupted two-user attempts.
 The complete local suite now passes 93 tests and 12 shell syntax checks.
 
+The larger `joint-twenty-338` attempt exposed a separate SSH login-burst limit.
+Controller sshd logs explicitly recorded `MaxStartups` throttling at that time
+(effective configuration `10:30:60`). No application IDs were captured in this
+aborted stage. It is not counted as a successful twenty-job experiment.
+
+The launcher now waits for an authenticated remote-shell acknowledgement before
+opening the next job SSH connection. It does not wait for each Hadoop job to
+finish, so applications can still overlap. Actual submission/authentication times
+are recorded; a shared scheduled start does not mean all submissions occur in
+the same instant. SSH server settings are unchanged. A read-only test successfully
+held ten authenticated connections while querying YARN metrics; that test
+submitted zero Hadoop jobs and is not a ten-job YARN result.
+
 On abort, it cancels only application IDs found in its own clients or by an
 exact job-name and submitting-user match. Completed results are preserved.
 An independent monitoring terminal remains useful if the workstation loses its

@@ -99,6 +99,24 @@ class ExperimentSafetyTests(unittest.TestCase):
             self.assertEqual(burst.run(['true']), 'ok')
             self.assertEqual(external.call_args.kwargs['stdin'], burst.subprocess.DEVNULL)
 
+    def test_next_connection_can_start_after_authentication_without_waiting_for_job(self):
+        ready = burst.threading.Event()
+        ready.set()
+        process = SimpleNamespace(poll=lambda: None)
+        burst.wait_for_authentication(process, ready, timeout=.01)
+
+    def test_missing_authentication_acknowledgement_fails(self):
+        ready = burst.threading.Event()
+        with self.assertRaises(RuntimeError):
+            burst.wait_for_authentication(SimpleNamespace(poll=lambda: 255), ready, timeout=.01)
+        with self.assertRaises(TimeoutError):
+            burst.wait_for_authentication(SimpleNamespace(poll=lambda: None), ready, timeout=.001)
+
+    def test_remote_submission_signals_authentication_before_hadoop(self):
+        with patch.object(burst, 'TRANSPORT', 'alice@controller'):
+            command = burst.job_execution(['hadoop', 'jar', '/safe/job.jar'])
+        self.assertLess(command[-1].index(burst.SSH_READY), command[-1].index('exec hadoop'))
+
     def test_repeated_ssh_timeouts_still_fail_closed(self):
         timeout = burst.subprocess.TimeoutExpired('ssh', 20)
         with patch.object(burst.subprocess, 'run', side_effect=timeout) as external:
