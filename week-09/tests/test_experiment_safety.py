@@ -89,6 +89,15 @@ class ExperimentSafetyTests(unittest.TestCase):
                           SimpleNamespace(stdout='healthy snapshot')]) as external:
             self.assertEqual(burst.host_snapshot('worker'), 'healthy snapshot')
             self.assertEqual(external.call_count, 2)
+            self.assertEqual(external.call_args.kwargs['stdin'], burst.subprocess.DEVNULL)
+
+    def test_background_ssh_does_not_read_the_interactive_console(self):
+        command = burst.ssh_prefix()
+        self.assertIn('-n', command)
+        self.assertIn('-T', command)
+        with patch.object(burst.subprocess, 'run', return_value=SimpleNamespace(stdout='ok')) as external:
+            self.assertEqual(burst.run(['true']), 'ok')
+            self.assertEqual(external.call_args.kwargs['stdin'], burst.subprocess.DEVNULL)
 
     def test_repeated_ssh_timeouts_still_fail_closed(self):
         timeout = burst.subprocess.TimeoutExpired('ssh', 20)
@@ -135,7 +144,7 @@ class ExperimentSafetyTests(unittest.TestCase):
                  patch.object(burst.threading, 'Thread', ImmediateThread):
                 self.assertEqual(burst.launch(args), 1)
             external.assert_called_once_with(['yarn', 'application', '-kill', 'application_1_1'],
-                                              timeout=30)
+                                              stdin=burst.subprocess.DEVNULL, timeout=30)
 
 
 if __name__ == '__main__':

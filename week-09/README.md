@@ -195,6 +195,26 @@ check found the worker healthy. That failed attempt is preserved in private
 evidence and is not included among the seven successful November 10 jobs.
 Use a new stage/output path and future time for the retry; do not overwrite it.
 
+The `joint-two` attempt also hit a monitoring timeout after the retry was added.
+One application was canceled; the other completed before cancellation and its
+registers were independently verified. This interrupted stage is not a completed
+two-user benchmark. Both attempts remain in the private evidence directories.
+
+The SSH processes originally inherited the interactive PowerShell console input.
+They now use `ssh -n -T` and a null stdin for submissions, monitoring and
+cancellation. OpenSSH's [manual](https://man.openbsd.org/ssh.1#n) specifies `-n`
+for background use. Console sharing was a plausible contributor to the hangs;
+the earlier timeout's precise internal cause was not captured. Increasing a
+timeout alone did not resolve the problem. Diagnostic results after console
+isolation are recorded separately in
+[interactive-recovery-summary.json](results/interactive-recovery-summary.json).
+Two interactive PowerShell repetitions submitted two jobs each. All four
+applications succeeded, their 128 registers matched the independent baseline,
+and neither run had a monitoring timeout or retry. The stages took about
+39.0 and 48.1 seconds including client/monitoring overhead. These are diagnostic
+same-account runs, not replacement data for the interrupted two-user attempts.
+The complete local suite now passes 93 tests and 12 shell syntax checks.
+
 On abort, it cancels only application IDs found in its own clients or by an
 exact job-name and submitting-user match. Completed results are preserved.
 An independent monitoring terminal remains useful if the workstation loses its

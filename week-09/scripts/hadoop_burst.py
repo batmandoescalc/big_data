@@ -30,7 +30,10 @@ from streaming import FlajoletMartin
 
 
 def ssh_prefix():
-    prefix = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5']
+    # Concurrent Windows SSH clients must not compete for console stdin.
+    # -n disconnects stdin; -T makes the no-terminal intent explicit.
+    prefix = ['ssh', '-n', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
+              '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2']
     if SSH_KEY:
         prefix += ['-i', SSH_KEY]
     return prefix
@@ -44,12 +47,13 @@ def execution(command):
 
 def run(command):
     return subprocess.run(execution(command), text=True, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, check=True, timeout=60).stdout
+                          stderr=subprocess.PIPE, stdin=subprocess.DEVNULL,
+                          check=True, timeout=60).stdout
 
 
 def exists(path):
     return subprocess.run(execution(['hdfs', 'dfs', '-test', '-e', path]),
-                          timeout=30).returncode == 0
+                          stdin=subprocess.DEVNULL, timeout=30).returncode == 0
 
 
 def identity():
@@ -101,7 +105,7 @@ def host_snapshot(host):
     for attempt in range(2):
         try:
             return subprocess.run(command, text=True, capture_output=True,
-                                  check=True, timeout=20).stdout
+                                  stdin=subprocess.DEVNULL, check=True, timeout=20).stdout
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
             if attempt:
                 raise
@@ -161,7 +165,7 @@ def prepare(args):
         if SSH_KEY:
             scp += ['-i', SSH_KEY]
         subprocess.run(scp + upload_files + [TRANSPORT + ':' + remote_input + '/'],
-                       check=True, timeout=60)
+                       stdin=subprocess.DEVNULL, check=True, timeout=60)
         upload_files = [remote_input + '/' + path.name for path in local_files]
     run(['hdfs', 'dfs', '-put', *upload_files, target])
     print(json.dumps(manifest, indent=2))
@@ -272,7 +276,7 @@ def launch(args):
         for row in rows:
             row['submitted_epoch'] = clock()
             process = subprocess.Popen(execution(row['command']), stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT, text=True)
+                                       stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
             processes.append(process)
             reader = threading.Thread(target=read_log, args=(process, row), daemon=True)
             reader.start()
@@ -320,7 +324,8 @@ def launch(args):
         # IDs came from exact name+owner REST matches or each owned client log.
         seen_ids.update(row['application_id'] for row in rows if 'application_id' in row)
         for app_id in sorted(seen_ids):
-            subprocess.run(execution(['yarn', 'application', '-kill', app_id]), timeout=30)
+            subprocess.run(execution(['yarn', 'application', '-kill', app_id]),
+                           stdin=subprocess.DEVNULL, timeout=30)
         for process in processes:
             if process.poll() is None:
                 process.terminate()

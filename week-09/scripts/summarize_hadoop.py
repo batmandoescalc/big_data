@@ -14,7 +14,8 @@ def main():
     args = parser.parse_args()
     report = dict(accounts=1, records_per_job=10_000, registers=128,
                   note='Same-account applications; not a multi-user scheduling experiment. '
-                       'Single stage per count; polling/SSH overhead affects observed times.', stages=[])
+                       'Each entry is one stage; repeated counts are separate repetitions. '
+                       'Polling/SSH overhead affects observed times.', stages=[])
     for folder in args.stages:
         manifest = json.loads((folder / 'manifest.json').read_text())
         rows = []
