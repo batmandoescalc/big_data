@@ -24,7 +24,9 @@ TRANSPORT = None
 SSH_KEY = None
 REMOTE_ROOT = None
 HADOOP_HOME = None
-SSH_READY = '__WEEK09_SSH_READY__'
+# After its stdin closes, the remote batch gives job clients this long to exit
+# on SIGTERM before it sends SIGKILL.
+STOP_GRACE_SECONDS = 10
 # YARN states in which an application is over and has nothing left to cancel.
 TERMINAL_STATES = ('FINISHED', 'FAILED', 'KILLED')
 # After an abort, list this stage's applications this many times, this far
@@ -37,39 +39,22 @@ from event_generator import generate_events
 from streaming import FlajoletMartin
 
 
-def ssh_prefix():
+def ssh_prefix(stdin=False):
     # Concurrent Windows SSH clients must not compete for console stdin.
     # -n disconnects stdin; -T makes the no-terminal intent explicit.
-    prefix = ['ssh', '-n', '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
-              '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2']
+    # Only the batch connection keeps stdin, and it is given a pipe.
+    prefix = ['ssh'] + ([] if stdin else ['-n']) + [
+        '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5',
+        '-o', 'ServerAliveInterval=5', '-o', 'ServerAliveCountMax=2']
     if SSH_KEY:
         prefix += ['-i', SSH_KEY]
     return prefix
 
 
-def execution(command):
+def execution(command, stdin=False):
     if TRANSPORT:
-        return ssh_prefix() + [TRANSPORT, 'source /etc/profile.d/hadoop.sh; exec ' + shlex.join(command)]
+        return ssh_prefix(stdin) + [TRANSPORT, 'source /etc/profile.d/hadoop.sh; exec ' + shlex.join(command)]
     return command
-
-
-def job_execution(command):
-    if TRANSPORT:
-        # Signal completed authentication before the parent opens another
-        # connection. This avoids sshd MaxStartups without serializing jobs.
-        remote = ('source /etc/profile.d/hadoop.sh; printf ' +
-                  shlex.quote(SSH_READY + '\n') + '; exec ' + shlex.join(command))
-        return ssh_prefix() + [TRANSPORT, remote]
-    return command
-
-
-def wait_for_authentication(process, ready, timeout=15):
-    deadline = time.monotonic() + timeout
-    while not ready.wait(.1):
-        if process.poll() is not None:
-            raise RuntimeError('job SSH connection exited before authentication acknowledgement; inspect job log')
-        if time.monotonic() >= deadline:
-            raise TimeoutError('job SSH authentication acknowledgement timed out')
 
 
 def run(command):
@@ -249,6 +234,80 @@ def prepare(args):
     print(json.dumps(manifest, indent=2))
 
 
+def batch_command(commands):
+    """One command that starts every job client at once and stops them all together.
+
+    A sign-in per job trips the SSH server's limit on simultaneous new
+    connections at about ten jobs, so one connection carries the whole batch.
+    Each client's lines come back tagged ``JOB<i> `` and its exit status as
+    ``JOB<i> BURST_EXIT <code>``.
+
+    Ending the local ssh does not stop the remote clients, so the script
+    watches its own stdin. The launcher holds that stdin open. When it closes
+    (launcher stopped or connection dropped), or on a signal, the script kills
+    its whole process group: every client it started. ``setsid`` gives the
+    script a process group of its own, so nothing else is in it.
+    """
+    # A signal makes the script signal its whole group once. `trap :` (handle,
+    # not ignore) keeps the script itself alive to finish the steps below.
+    lines = ["trap 'trap : TERM; kill -TERM 0' TERM HUP INT", 'pids=']
+    for index, command in enumerate(commands):
+        lines += ['{ ' + shlex.join(command) + ' 2>&1; echo "BURST_EXIT $?"; } | '
+                  + f"sed -u 's/^/JOB{index} /' &",
+                  'pids="$pids $!"']
+    lines += [
+        # Bash gives a background command an empty stdin unless it names one,
+        # so only this watcher reads the launcher's pipe; <&0 is what names it.
+        '{ cat >/dev/null; kill -TERM $$; } <&0 &',
+        # Returns when every client has finished, or early on a signal.
+        'wait $pids',
+        # Stop whatever is left: clients after a signal, otherwise the watcher.
+        'trap : TERM; kill -TERM 0',
+        f'( sleep {STOP_GRACE_SECONDS}; kill -KILL 0 ) >/dev/null 2>&1 &',
+        'wait $pids']
+    return ['setsid', '-w', 'bash', '-c', '\n'.join(lines)]
+
+
+class BatchClient:
+    """One job's client inside the shared SSH connection."""
+
+    def __init__(self, connection):
+        self.connection = connection
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        # Closing stdin is the stop signal the remote script watches for.
+        self.connection.stdin.close()
+
+    def kill(self):
+        self.connection.kill()
+
+    def wait(self, timeout=None):
+        self.connection.wait(timeout=timeout)
+        return self.returncode
+
+
+def route_batch_output(stream, clients, on_line, stray):
+    """Send each tagged line to its job; a dropped connection fails the rest."""
+    for line in stream:
+        match = re.match(r'JOB(\d+) (.*)', line, re.S)
+        if not match or int(match[1]) >= len(clients):
+            stray(line)
+            continue
+        index, text = int(match[1]), match[2]
+        finished = re.fullmatch(r'BURST_EXIT (\d+)\s*', text)
+        if finished:
+            clients[index].returncode = int(finished[1])
+        else:
+            on_line(index, text)
+    for client in clients:
+        if client.returncode is None:
+            client.returncode = 255
+
+
 def command_for(input_path, output, name, user):
     source = (PurePosixPath(REMOTE_ROOT) if REMOTE_ROOT else ROOT) / 'week-07/scripts'
     if TRANSPORT:
@@ -328,20 +387,31 @@ def launch(args):
     names = {row['name']: row for row in rows}
     snapshots = (args.evidence / 'observations.jsonl').open('w')
 
-    def read_log(process, row, ready):
+    def record(row, line, log):
+        log.write(line)
+        log.flush()
+        match = re.search(r'application_\d+_\d+', line)
+        if match:
+            if 'application_id' not in row:
+                print(f'Job {row["index"]}: submitted {match[0]}', flush=True)
+            row['application_id'] = match[0]
+
+    def read_log(process, row):
         with (args.evidence / f'job-{row["index"]}.log').open('w') as log:
             for line in process.stdout:
-                if line.strip() == SSH_READY:
-                    row['ssh_authenticated_epoch'] = clock()
-                    ready.set()
-                    continue
-                log.write(line)
-                log.flush()
-                match = re.search(r'application_\d+_\d+', line)
-                if match:
-                    if 'application_id' not in row:
-                        print(f'Job {row["index"]}: submitted {match[0]}', flush=True)
-                    row['application_id'] = match[0]
+                record(row, line, log)
+
+    def read_batch(connection, clients):
+        logs = [(args.evidence / f'job-{row["index"]}.log').open('w') for row in rows]
+        try:
+            # Lines without a job tag (SSH banners and errors) are kept too.
+            with (args.evidence / 'connection.log').open('w') as stray:
+                route_batch_output(connection.stdout, clients,
+                                   lambda index, line: record(rows[index], line, logs[index]),
+                                   stray.write)
+        finally:
+            for log in logs:
+                log.close()
 
     def save():
         path = args.evidence / 'manifest.json'
@@ -355,18 +425,28 @@ def launch(args):
               f'; jobs: {len(rows)}. Waiting for the start time...', flush=True)
         while clock() < target:
             time.sleep(max(0, min(.1, target - clock())))
-        for row in rows:
-            row['submitted_epoch'] = clock()
-            process = subprocess.Popen(job_execution(row['command']), stdout=subprocess.PIPE,
-                                       stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
-            processes.append(process)
-            ready = threading.Event()
-            reader = threading.Thread(target=read_log, args=(process, row, ready), daemon=True)
+        if TRANSPORT:
+            # One SSH connection starts every client together. Its stdin stays
+            # open for the whole stage; closing it stops the remote clients.
+            started = clock()
+            connection = subprocess.Popen(
+                execution(batch_command([row['command'] for row in rows]), stdin=True),
+                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, text=True)
+            for row in rows:
+                row['submitted_epoch'] = started
+                processes.append(BatchClient(connection))
+            reader = threading.Thread(target=read_batch, args=(connection, processes), daemon=True)
             reader.start()
             readers.append(reader)
-            if TRANSPORT:
-                wait_for_authentication(process, ready)
-                print(f'Job {row["index"]}: SSH authenticated; submission client running.', flush=True)
+        else:
+            for row in rows:
+                row['submitted_epoch'] = clock()
+                process = subprocess.Popen(row['command'], stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, text=True)
+                processes.append(process)
+                reader = threading.Thread(target=read_log, args=(process, row), daemon=True)
+                reader.start()
+                readers.append(reader)
         last_health = 0
         while True:
             now = clock()

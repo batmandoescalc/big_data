@@ -1,8 +1,12 @@
 """Safety and evidence checks; never connect to the cluster."""
 import importlib.util
 import json
+import os
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
@@ -100,24 +104,6 @@ class ExperimentSafetyTests(unittest.TestCase):
             self.assertEqual(burst.run(['true']), 'ok')
             self.assertEqual(external.call_args.kwargs['stdin'], burst.subprocess.DEVNULL)
 
-    def test_next_connection_can_start_after_authentication_without_waiting_for_job(self):
-        ready = burst.threading.Event()
-        ready.set()
-        process = SimpleNamespace(poll=lambda: None)
-        burst.wait_for_authentication(process, ready, timeout=.01)
-
-    def test_missing_authentication_acknowledgement_fails(self):
-        ready = burst.threading.Event()
-        with self.assertRaises(RuntimeError):
-            burst.wait_for_authentication(SimpleNamespace(poll=lambda: 255), ready, timeout=.01)
-        with self.assertRaises(TimeoutError):
-            burst.wait_for_authentication(SimpleNamespace(poll=lambda: None), ready, timeout=.001)
-
-    def test_remote_submission_signals_authentication_before_hadoop(self):
-        with patch.object(burst, 'TRANSPORT', 'alice@controller'):
-            command = burst.job_execution(['hadoop', 'jar', '/safe/job.jar'])
-        self.assertLess(command[-1].index(burst.SSH_READY), command[-1].index('exec hadoop'))
-
     def test_repeated_ssh_timeouts_still_fail_closed(self):
         timeout = burst.subprocess.TimeoutExpired('ssh', 20)
         with patch.object(burst.subprocess, 'run', side_effect=timeout) as external:
@@ -139,22 +125,9 @@ class ExperimentSafetyTests(unittest.TestCase):
             def wait(self, timeout=None):
                 return self.returncode
 
-        class ImmediateThread:
-            def __init__(self, target, args, **kwargs):
-                self.target, self.args = target, args
-            def start(self):
-                self.target(*self.args)
-            def join(self, **kwargs):
-                pass
-
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            expected = root / 'expected.json'
-            expected.write_text(__import__('json').dumps({i: 0 for i in range(128)}))
-            args = SimpleNamespace(hdfs_input='/user/alice/input', hdfs_output='/user/alice/out',
-                                   stage='abort-test', start_at=None, expected=expected, jobs=1,
-                                   execute=True, hosts='a,b,c,d', rm_url='unused', timeout=10,
-                                   evidence=root / 'evidence')
+            args = launch_args(root, 'abort-test', 1)
             with patch.object(burst, 'TRANSPORT', None), \
                  patch.object(burst, 'identity', return_value='alice'), \
                  patch.object(burst, 'command_for', return_value=['fake-hadoop']), \
@@ -175,6 +148,190 @@ class ExperimentSafetyTests(unittest.TestCase):
             manifest = json.loads((root / 'evidence' / 'manifest.json').read_text())
             self.assertEqual(manifest['cancelled_application_ids'], ['application_1_1'])
             self.assertEqual(manifest['cancel_failed_application_ids'], [])
+
+
+class ImmediateThread:
+    """Runs the reader inline, so a fake client's output is read before launch polls."""
+
+    def __init__(self, target, args, **kwargs):
+        self.target, self.args = target, args
+
+    def start(self):
+        self.target(*self.args)
+
+    def join(self, **kwargs):
+        pass
+
+
+def launch_args(root, stage, jobs):
+    expected = root / 'expected.json'
+    expected.write_text(json.dumps({i: 0 for i in range(128)}))
+    return SimpleNamespace(hdfs_input='/user/alice/input', hdfs_output='/user/alice/out',
+                           stage=stage, start_at=None, expected=expected, jobs=jobs,
+                           execute=True, hosts='a,b,c,d', rm_url='unused', timeout=10,
+                           evidence=root / 'evidence')
+
+
+def gone(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    return False
+
+
+class SingleConnectionBatchTests(unittest.TestCase):
+    """A remote batch uses one SSH connection, keeps each job's result apart, and stops every client with it."""
+
+    def test_script_starts_every_job_in_the_background_and_watches_stdin(self):
+        command = burst.batch_command([['hadoop', 'jar', 'a b.jar'], ['hadoop', 'jar', 'c.jar']])
+        self.assertEqual(command[:4], ['setsid', '-w', 'bash', '-c'])
+        script = command[4]
+        self.assertEqual(script.count("/' &"), 2)
+        self.assertIn("'a b.jar'", script)
+        self.assertIn('s/^/JOB1 /', script)
+        self.assertIn('<&0 &', script)
+
+    def test_batch_connection_keeps_stdin_and_other_ssh_calls_do_not(self):
+        with patch.object(burst, 'TRANSPORT', 'alice@controller'):
+            self.assertNotIn('-n', burst.execution(['true'], stdin=True))
+            self.assertIn('-n', burst.execution(['true']))
+
+    def test_lines_and_exit_codes_reach_the_right_job(self):
+        clients = [burst.BatchClient(None) for _ in range(2)]
+        seen, stray = [], []
+        burst.route_batch_output(iter(['Authorized uses only.\n',
+                                       'JOB1 Submitted application application_1_7\n',
+                                       'JOB0 BURST_EXIT 0\n', 'JOB1 BURST_EXIT 2\n']),
+                                 clients, lambda index, line: seen.append((index, line)), stray.append)
+        self.assertEqual(seen, [(1, 'Submitted application application_1_7\n')])
+        self.assertEqual(stray, ['Authorized uses only.\n'])
+        self.assertEqual([client.poll() for client in clients], [0, 2])
+
+    def test_dropped_connection_fails_every_unfinished_job(self):
+        clients = [burst.BatchClient(None) for _ in range(3)]
+        burst.route_batch_output(iter(['JOB0 BURST_EXIT 0\n']), clients,
+                                 lambda index, line: None, lambda line: None)
+        self.assertEqual([client.poll() for client in clients], [0, 255, 255])
+
+    def remote_launch(self, root, jobs, lines, health):
+        events = []
+
+        class Connection:
+            stdout = iter(lines)
+            stdin = SimpleNamespace(close=lambda: events.append('stdin closed'))
+            def wait(self, timeout=None):
+                return 0
+
+        registers = ''.join(f'{i}\t0\n' for i in range(128))
+        finished = {'app': dict(state='FINISHED', finalStatus='SUCCEEDED')}
+        with patch.object(burst, 'TRANSPORT', 'alice@controller'), \
+             patch.object(burst, 'identity', return_value='alice'), \
+             patch.object(burst, 'command_for', return_value=['fake-hadoop']), \
+             patch.object(burst, 'exists', return_value=False), \
+             patch.object(burst, 'run', side_effect=lambda command: registers if 'dfs' in command else str(time.time())), \
+             patch.object(burst, 'health', side_effect=health), \
+             patch.object(burst, 'api', side_effect=lambda base, endpoint: finished if '/' in endpoint else {}), \
+             patch.object(burst.time, 'sleep'), \
+             patch.object(burst.subprocess, 'Popen', return_value=Connection()) as popen, \
+             patch.object(burst.subprocess, 'run', side_effect=lambda *a, **k: (
+                 events.append('application cancelled'), SimpleNamespace(returncode=0))[1]), \
+             patch.object(burst.threading, 'Thread', ImmediateThread):
+            code = burst.launch(launch_args(root, 'remote', jobs))
+        return code, popen, events, json.loads((root / 'evidence' / 'manifest.json').read_text())
+
+    def test_ten_remote_jobs_open_one_connection_with_stdin_held(self):
+        lines = ([f'JOB{i} Submitted application application_1_{i}\n' for i in range(10)]
+                 + [f'JOB{i} BURST_EXIT 0\n' for i in range(10)])
+        with tempfile.TemporaryDirectory() as directory:
+            code, popen, _, manifest = self.remote_launch(Path(directory), 10, lines, lambda *a: {})
+        self.assertEqual(code, 0)
+        self.assertEqual(popen.call_count, 1)
+        self.assertEqual(popen.call_args.kwargs['stdin'], burst.subprocess.PIPE)
+        self.assertNotIn('-n', popen.call_args.args[0])
+        self.assertEqual([job['application_id'] for job in manifest['jobs']],
+                         [f'application_1_{i}' for i in range(10)])
+        self.assertTrue(all(job['registers_match'] for job in manifest['jobs']))
+
+    def test_remote_abort_closes_stdin_before_cancelling(self):
+        class Unfinished:
+            # The clients are still running: the stream stays open until stdin closes.
+            def __iter__(self):
+                return iter(['JOB0 Submitted application application_1_1\n'])
+
+        outcomes = iter([{}, RuntimeError('unhealthy')])
+
+        def health(*args):
+            outcome = next(outcomes)
+            if isinstance(outcome, Exception):
+                raise outcome
+            return outcome
+
+        with tempfile.TemporaryDirectory() as directory:
+            with patch.object(burst, 'route_batch_output',
+                              side_effect=lambda stream, clients, on_line, stray:
+                              [on_line(0, line[5:]) for line in stream]):
+                code, _, events, manifest = self.remote_launch(Path(directory), 1, Unfinished(), health)
+        self.assertEqual(code, 1)
+        self.assertEqual(events[:2], ['stdin closed', 'application cancelled'])
+        self.assertEqual(manifest['cancelled_application_ids'], ['application_1_1'])
+
+
+@unittest.skipUnless(os.name == 'posix' and all(map(shutil.which, ('bash', 'sed', 'setsid'))),
+                     'needs bash, sed and setsid')
+class BatchScriptProcessTests(unittest.TestCase):
+    """The generated batch script, run by a real shell with stand-in clients, leaves no client alive once stopped."""
+
+    def start(self, commands):
+        process = subprocess.Popen(burst.batch_command(commands), text=True,
+                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        self.addCleanup(process.kill)
+        self.addCleanup(process.stdout.close)
+        return process
+
+    def client_pids(self, process, count):
+        return [int(process.stdout.readline().split()[1]) for _ in range(count)]
+
+    def assert_all_gone(self, process, pids):
+        process.wait(timeout=20)
+        deadline = time.monotonic() + 5
+        while not all(map(gone, pids)) and time.monotonic() < deadline:
+            time.sleep(.05)
+        self.assertEqual([pid for pid in pids if not gone(pid)], [])
+
+    def test_lines_are_tagged_and_each_exit_status_is_reported(self):
+        process = self.start([['sh', '-c', 'echo first; exit 0'],
+                              ['sh', '-c', 'echo second >&2; exit 3']])
+        # stdin stays open: the script ends by itself once every client has.
+        self.assertEqual(sorted(process.stdout.read().splitlines()),
+                         ['JOB0 BURST_EXIT 0', 'JOB0 first', 'JOB1 BURST_EXIT 3', 'JOB1 second'])
+        process.wait(timeout=20)
+
+    def test_closing_stdin_stops_every_client(self):
+        process = self.start([['sh', '-c', 'echo $$; exec sleep 300']] * 3)
+        pids = self.client_pids(process, 3)
+        self.assertFalse(any(map(gone, pids)))
+        process.stdin.close()
+        self.assert_all_gone(process, pids)
+
+    def test_a_signal_stops_every_client(self):
+        process = self.start([['sh', '-c', 'echo $$; exec sleep 300']] * 3)
+        pids = self.client_pids(process, 3)
+        process.terminate()
+        self.assert_all_gone(process, pids)
+
+    def test_client_that_ignores_the_stop_signal_is_killed(self):
+        stubborn = ['bash', '-c', 'trap "" TERM; echo $$; while :; do sleep 1; done']
+        with patch.object(burst, 'STOP_GRACE_SECONDS', 1):
+            process = self.start([stubborn])
+        pids = self.client_pids(process, 1)
+        process.stdin.close()
+        # SIGKILL takes the script too, so only the client's absence is checked.
+        process.wait(timeout=20)
+        deadline = time.monotonic() + 5
+        while not gone(pids[0]) and time.monotonic() < deadline:
+            time.sleep(.05)
+        self.assertTrue(gone(pids[0]))
 
 
 def listing(*apps):
