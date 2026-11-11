@@ -96,13 +96,24 @@ def api(base, endpoint):
         return json.load(response)
 
 
+def host_snapshot(host):
+    command = ssh_prefix() + [host, 'cat /proc/meminfo; df -P / /home /data']
+    for attempt in range(2):
+        try:
+            return subprocess.run(command, text=True, capture_output=True,
+                                  check=True, timeout=20).stdout
+        except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
+            if attempt:
+                raise
+            print('SSH health check delayed or failed; retrying once before aborting.', flush=True)
+
+
 def health(base, hosts):
     metrics = api(base, 'metrics')['clusterMetrics']
     if metrics['activeNodes'] != 3 or metrics['unhealthyNodes'] or metrics['lostNodes']:
         raise RuntimeError('expected three healthy workers')
     for host in hosts:
-        output = subprocess.run(ssh_prefix() + [host, 'cat /proc/meminfo; df -P / /home /data'],
-                                text=True, capture_output=True, check=True, timeout=15).stdout
+        output = host_snapshot(host)
         available = re.search(r'^MemAvailable:\s+(\d+)', output, re.M)
         if not available or int(available[1]) < 2 * 1024 * 1024:
             raise RuntimeError('VM available RAM below 2 GiB, or unavailable')
@@ -216,6 +227,7 @@ def launch(args):
     hosts = [host for host in args.hosts.split(',') if host]
     if len(hosts) != 4:
         raise ValueError('--hosts must list controller and all three workers for health checks')
+    print('Checking cluster and VM health before submission...', flush=True)
     health(args.rm_url, hosts)
     if args.start_at and target < clock():
         raise ValueError('scheduled start already passed during preflight; choose a later time')
@@ -241,6 +253,8 @@ def launch(args):
                 log.flush()
                 match = re.search(r'application_\d+_\d+', line)
                 if match:
+                    if 'application_id' not in row:
+                        print(f'Job {row["index"]}: submitted {match[0]}', flush=True)
                     row['application_id'] = match[0]
 
     def save():
@@ -250,6 +264,9 @@ def launch(args):
         temporary.replace(path)
 
     try:
+        print('Ready. Scheduled controller time: ' +
+              dt.datetime.fromtimestamp(target, dt.timezone.utc).isoformat() +
+              f'; jobs: {len(rows)}. Waiting for the start time...', flush=True)
         while clock() < target:
             time.sleep(max(0, min(.1, target - clock())))
         for row in rows:
@@ -277,6 +294,8 @@ def launch(args):
                     if app.get('name') == row['name'] and app.get('user') == user:
                         seen_ids.add(app['id'])
                         row['application_id'] = app['id']
+                        if row.get('state') != app['state']:
+                            print(f'Job {row["index"]}: {app["state"]}', flush=True)
                         row['state'] = app['state']
                         row['final_status'] = app['finalStatus']
                         row['rm_started_ms'] = app.get('startedTime')
@@ -296,6 +315,7 @@ def launch(args):
             time.sleep(2)
     except (Exception, KeyboardInterrupt) as exc:
         abort_reason = str(exc) or 'interrupted'
+        print('Stopping this stage: ' + abort_reason, flush=True)
         manifest['abort_reason'] = abort_reason
         # IDs came from exact name+owner REST matches or each owned client log.
         seen_ids.update(row['application_id'] for row in rows if 'application_id' in row)

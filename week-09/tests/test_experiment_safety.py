@@ -83,6 +83,20 @@ class ExperimentSafetyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 burst.health('unused', ['alice@worker'])
 
+    def test_one_ssh_timeout_is_retried(self):
+        timeout = burst.subprocess.TimeoutExpired('ssh', 20)
+        with patch.object(burst.subprocess, 'run', side_effect=[timeout,
+                          SimpleNamespace(stdout='healthy snapshot')]) as external:
+            self.assertEqual(burst.host_snapshot('worker'), 'healthy snapshot')
+            self.assertEqual(external.call_count, 2)
+
+    def test_repeated_ssh_timeouts_still_fail_closed(self):
+        timeout = burst.subprocess.TimeoutExpired('ssh', 20)
+        with patch.object(burst.subprocess, 'run', side_effect=timeout) as external:
+            with self.assertRaises(burst.subprocess.TimeoutExpired):
+                burst.host_snapshot('worker')
+            self.assertEqual(external.call_count, 2)
+
     def test_health_abort_kills_only_the_recorded_experiment_application(self):
         class Process:
             stdout = iter(['Submitted application application_1_1\n'])

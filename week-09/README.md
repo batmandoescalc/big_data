@@ -185,6 +185,15 @@ and filesystem use through the workstation's SSH connections. It stops on RAM
 below 2 GiB, any swap use, filesystem use over 85%, unhealthy/lost nodes,
 unexpected job failures or a maximum 20-minute stage deadline. Monitoring adds
 overhead; it is applied to every stage and is not algorithm runtime.
+An SSH snapshot that times out or fails is retried once (20 seconds per attempt);
+repeated connection failure still aborts. Resource-limit violations are not retried.
+The terminal prints preflight, scheduled-start, application-ID and state updates.
+
+The November 11 `joint-one` attempt submitted Noah's application successfully
+but a 15-second worker SSH monitoring timeout triggered cancellation. A follow-up
+check found the worker healthy. That failed attempt is preserved in private
+evidence and is not included among the seven successful November 10 jobs.
+Use a new stage/output path and future time for the retry; do not overwrite it.
 
 On abort, it cancels only application IDs found in its own clients or by an
 exact job-name and submitting-user match. Completed results are preserved.
