@@ -150,6 +150,39 @@ class ExperimentSafetyTests(unittest.TestCase):
             self.assertEqual(manifest['cancel_failed_application_ids'], [])
 
 
+class ClientBudgetTests(unittest.TestCase):
+    """A stage is refused when its job clients would not fit in the controller's memory, and health is checked more often while jobs launch."""
+
+    def check(self, available_mib, clients):
+        output = SimpleNamespace(stdout=f'MemAvailable: {available_mib * 1024} kB\n')
+        with patch.object(burst, 'api', return_value={'clusterMetrics':
+                          dict(activeNodes=3, unhealthyNodes=0, lostNodes=0)}), \
+             patch.object(burst.subprocess, 'run', return_value=output):
+            return burst.health('unused', ['alice@controller', 'alice@worker'], clients)
+
+    def test_clients_that_fit_are_counted_above_the_guard(self):
+        allowance = burst.CLIENT_ALLOWANCE_KB
+        self.assertEqual(burst.clients_that_fit(burst.MIN_AVAILABLE_KB + 3 * allowance), 3)
+        self.assertEqual(burst.clients_that_fit(burst.MIN_AVAILABLE_KB + 3 * allowance - 1), 2)
+        self.assertEqual(burst.clients_that_fit(burst.MIN_AVAILABLE_KB - 1), 0)
+
+    def test_stage_that_fits_is_allowed(self):
+        self.check(2048 + 4 * 256, 4)
+
+    def test_stage_that_does_not_fit_is_refused_and_says_how_many_would(self):
+        # The idle controller measured before the 15-each round had 5,655 MiB.
+        with self.assertRaisesRegex(RuntimeError, 'only 14 would fit'):
+            self.check(5655, 15)
+
+    def test_running_stage_is_held_to_the_guard_alone(self):
+        self.check(2048, 0)
+
+    def test_health_is_checked_more_often_until_every_job_has_reached_yarn(self):
+        launching = [dict(application_id='application_1_1'), dict()]
+        launched = [dict(application_id='application_1_1'), dict(application_id='application_1_2')]
+        self.assertLess(burst.health_interval(launching), burst.health_interval(launched))
+
+
 class ImmediateThread:
     """Runs the reader inline, so a fake client's output is read before launch polls."""
 

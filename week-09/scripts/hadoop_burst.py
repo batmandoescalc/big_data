@@ -34,6 +34,14 @@ TERMINAL_STATES = ('FINISHED', 'FAILED', 'KILLED')
 # then shows up in YARN a few seconds later.
 CLEANUP_POLLS = 5
 CLEANUP_POLL_SECONDS = 2
+# Every VM must keep this much memory available (kB, as /proc/meminfo reports).
+MIN_AVAILABLE_KB = 2 * 1024 * 1024
+# Controller memory set aside for each job client before a stage may start.
+# Measured in the 15-jobs-each round: about 209 MB per client JVM (15 clients
+# used 3,137 MB). Rounded up to 256 MiB for headroom.
+# shortcut: counts only this launcher's clients, not another account's that
+# start at the same time; in a joint round both batches must fit together.
+CLIENT_ALLOWANCE_KB = 256 * 1024
 sys.path.insert(0, str(ROOT / 'week-07/scripts'))
 from event_generator import generate_events
 from streaming import FlajoletMartin
@@ -175,15 +183,39 @@ def host_snapshot(host):
             print('SSH health check delayed or failed; retrying once before aborting.', flush=True)
 
 
-def health(base, hosts):
+def clients_that_fit(available_kb):
+    """How many job clients the controller can start and stay above the RAM guard."""
+    return max(0, (available_kb - MIN_AVAILABLE_KB) // CLIENT_ALLOWANCE_KB)
+
+
+def health_interval(rows):
+    """Seconds between health checks: short until every job has reached YARN.
+
+    The controller lost about 3 GB in 45 seconds while 30 clients started, so
+    the launch window is when a 15-second gap is too long.
+    """
+    return 15 if all('application_id' in row for row in rows) else 5
+
+
+def health(base, hosts, new_clients=0):
+    """Raise unless the cluster is healthy; hosts lists the controller first.
+
+    new_clients is the number of job clients about to start on the controller.
+    """
     metrics = api(base, 'metrics')['clusterMetrics']
     if metrics['activeNodes'] != 3 or metrics['unhealthyNodes'] or metrics['lostNodes']:
         raise RuntimeError('expected three healthy workers')
-    for host in hosts:
+    for index, host in enumerate(hosts):
         output = host_snapshot(host)
-        available = re.search(r'^MemAvailable:\s+(\d+)', output, re.M)
-        if not available or int(available[1]) < 2 * 1024 * 1024:
+        found = re.search(r'^MemAvailable:\s+(\d+)', output, re.M)
+        available = int(found[1]) if found else 0
+        if available < MIN_AVAILABLE_KB:
             raise RuntimeError('VM available RAM below 2 GiB, or unavailable')
+        if index == 0 and new_clients > clients_that_fit(available):
+            raise RuntimeError(
+                f'{new_clients} job clients need about {new_clients * CLIENT_ALLOWANCE_KB // 1024} MiB '
+                f'on the controller, which has {available // 1024} MiB available; '
+                f'only {clients_that_fit(available)} would fit above the 2 GiB guard')
         for percent in re.findall(r'\s(\d+)%\s/', output):
             if int(percent) > 85:
                 raise RuntimeError('filesystem usage above 85%')
@@ -369,7 +401,7 @@ def launch(args):
     if len(hosts) != 4:
         raise ValueError('--hosts must list controller and all three workers for health checks')
     print('Checking cluster and VM health before submission...', flush=True)
-    health(args.rm_url, hosts)
+    health(args.rm_url, hosts, len(rows))
     if args.start_at and target < clock():
         raise ValueError('scheduled start already passed during preflight; choose a later time')
     run(['hdfs', 'dfs', '-test', '-r', input_path])
@@ -452,7 +484,7 @@ def launch(args):
             now = clock()
             if now - target > args.timeout:
                 raise RuntimeError('stage timeout')
-            if now - last_health >= 15:
+            if now - last_health >= health_interval(rows):
                 metrics = health(args.rm_url, hosts)
                 snapshots.write(json.dumps(dict(time=now, metrics=metrics)) + '\n')
                 last_health = now
@@ -543,7 +575,8 @@ def main():
     batch.add_argument('--jobs', type=int, choices=range(1, 16), default=1)
     batch.add_argument('--expected', type=Path, required=True)
     batch.add_argument('--evidence', type=Path, required=True)
-    batch.add_argument('--hosts', default=os.environ.get('HADOOP_HOSTS', ''))
+    batch.add_argument('--hosts', default=os.environ.get('HADOOP_HOSTS', ''),
+                       help='comma-separated SSH targets: the controller first, then the three workers')
     batch.add_argument('--start-at', help='ISO timestamp with offset; both users choose same time')
     batch.add_argument('--timeout', type=int, default=1200)
     batch.add_argument('--execute', action='store_true')
