@@ -1,0 +1,320 @@
+{
+  "date": "2026-11-11",
+  "provenance": "Saved normal-user YARN REST snapshots, Noah launcher manifests, and separately attributed Max meeting notes; raw account/host evidence remains ignored.",
+  "eight_job_round": {
+    "submitted": 8,
+    "participants": 2,
+    "jobs_per_participant": 4,
+    "all_yarn_jobs_succeeded": true,
+    "noah_outputs_exactly_matched": 4,
+    "max_output_equality": "Not independently checked by this report; obtain Max input/output evidence.",
+    "max_observed_running_applications": 2,
+    "max_observed_pending_applications": 6,
+    "peak_allocated_vcores": 6,
+    "peak_allocated_memory_mib": 6144,
+    "cluster_vcores": 6,
+    "cluster_memory_mib": 12288,
+    "scheduled_start_to_last_finish_seconds": 165.5680000782013,
+    "applications": [
+      {
+        "participant": "Noah",
+        "application_id": "application_1794390829908_0016",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 17.63599991798401,
+        "rm_submission_to_finish_seconds": 28.193,
+        "noah_output_equality_verified": true,
+        "observed_am_wait_from_client_seconds": 32.273221015930176,
+        "client_turnaround_seconds": 48.81939148902893
+      },
+      {
+        "participant": "Noah",
+        "application_id": "application_1794390829908_0017",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 17.598000049591064,
+        "rm_submission_to_finish_seconds": 25.92,
+        "noah_output_equality_verified": true,
+        "observed_am_wait_from_client_seconds": 32.28515815734863,
+        "client_turnaround_seconds": 46.284026861190796
+      },
+      {
+        "participant": "Noah",
+        "application_id": "application_1794390829908_0018",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 18.717000007629395,
+        "rm_submission_to_finish_seconds": 66.173,
+        "noah_output_equality_verified": true,
+        "observed_am_wait_from_client_seconds": 70.61016941070557,
+        "client_turnaround_seconds": 86.88829398155212
+      },
+      {
+        "participant": "Noah",
+        "application_id": "application_1794390829908_0019",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 18.45199990272522,
+        "rm_submission_to_finish_seconds": 87.785,
+        "noah_output_equality_verified": true,
+        "observed_am_wait_from_client_seconds": 80.96928858757019,
+        "client_turnaround_seconds": 107.891286611557
+      },
+      {
+        "participant": "Max",
+        "application_id": "application_1794390829908_0020",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 19.270999908447266,
+        "rm_submission_to_finish_seconds": 100.713,
+        "noah_output_equality_verified": null
+      },
+      {
+        "participant": "Max",
+        "application_id": "application_1794390829908_0021",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 19.256999969482422,
+        "rm_submission_to_finish_seconds": 111.505,
+        "noah_output_equality_verified": null
+      },
+      {
+        "participant": "Max",
+        "application_id": "application_1794390829908_0022",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 19.283999919891357,
+        "rm_submission_to_finish_seconds": 135.343,
+        "noah_output_equality_verified": null
+      },
+      {
+        "participant": "Max",
+        "application_id": "application_1794390829908_0023",
+        "final_status": "SUCCEEDED",
+        "accepted_after_scheduled_start_seconds": 19.35199999809265,
+        "rm_submission_to_finish_seconds": 146.216,
+        "noah_output_equality_verified": null
+      }
+    ]
+  },
+  "scheduler": {
+    "queue_ordering": "fifo",
+    "am_memory_limit_mib": 2048,
+    "interpretation": "FIFO configuration and consecutive per-user IDs fit submission-order queueing. Fully allocated vcores alone do not prove CPU is the sole bottleneck; application-manager admission is also constrained."
+  },
+  "thirty_job_attempt": {
+    "submitted": 30,
+    "participants": 2,
+    "jobs_per_participant": 15,
+    "outcome": "Interrupted experiment after RAM guard; not 30 successful completions",
+    "guard_message": "VM available RAM below 2 GiB, or unavailable",
+    "guard_measurement_limitation": "The launcher did not retain the triggering node or exact MemAvailable value.",
+    "controller_followup_after_abort": {
+      "available_memory_mib": 3121,
+      "swap_used_mib": 107,
+      "one_minute_load": 12.31
+    },
+    "controller_followup_after_own_cleanup": {
+      "available_memory_mib": 5692,
+      "swap_used_mib": 86
+    },
+    "counts_by_participant": {
+      "Noah": {
+        "SUCCEEDED": 1,
+        "KILLED": 14
+      },
+      "Max": {
+        "SUCCEEDED": 15
+      }
+    },
+    "applications": [
+      {
+        "application_id": "application_1794390829908_0024",
+        "participant": "Noah",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0025",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0026",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0027",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0028",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0029",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0030",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0031",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0032",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0033",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0034",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0035",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0036",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0037",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0038",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0039",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0040",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0041",
+        "participant": "Max",
+        "state": "FINISHED",
+        "final_status": "SUCCEEDED"
+      },
+      {
+        "application_id": "application_1794390829908_0042",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0043",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0044",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0045",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0046",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0047",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0048",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0049",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0050",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0051",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0052",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      },
+      {
+        "application_id": "application_1794390829908_0053",
+        "participant": "Noah",
+        "state": "KILLED",
+        "final_status": "KILLED"
+      }
+    ],
+    "cleanup": "14 matching Noah stage applications canceled after late-arriving IDs escaped the initial cancellation snapshot. Max applications were untouched."
+  },
+  "max_reported_notes": {
+    "source": "Summary pasted by Noah from Max at 3:36 p.m.; these timing claims are separately attributed.",
+    "execution_under_40_seconds": true,
+    "last_job_wait_seconds": 118,
+    "linear_20_seconds_per_job": "Small-sample prediction only; the 30-job memory interruption does not validate linear scaling."
+  },
+  "closeout": {
+    "active_applications": 0,
+    "active_nodes": 3,
+    "controller_available_memory_mib": 5647.328125,
+    "controller_swap_used_mib": 86.25,
+    "new_experiments_planned": false
+  }
+}
