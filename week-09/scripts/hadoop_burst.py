@@ -413,7 +413,7 @@ def launch(args):
                     controller_clock_offset_seconds=offset,
                     clock_sample_uncertainty_seconds=(after_clock - before_clock) / 2,
                     poll_seconds=2, expected_sha256=checksum(expected), jobs=rows,
-                    queue_time_note='observed RUNNING means application manager running, not first task')
+                    queue_time_note='observed RUNNING means ApplicationMaster running, not first task')
     processes, readers = [], []
     abort_reason = None
     names = {row['name']: row for row in rows}

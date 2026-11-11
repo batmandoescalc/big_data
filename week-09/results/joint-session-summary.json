@@ -112,7 +112,7 @@
   "scheduler": {
     "queue_ordering": "fifo",
     "am_memory_limit_mib": 2048,
-    "interpretation": "FIFO configuration and consecutive per-user IDs fit submission-order queueing. Fully allocated vcores alone do not prove CPU is the sole bottleneck; application-manager admission is also constrained."
+    "interpretation": "FIFO configuration and consecutive per-user IDs fit submission-order queueing. Fully allocated vcores alone do not prove CPU is the sole bottleneck; ApplicationMaster admission is also constrained."
   },
   "twenty_job_attempt": {
     "submitted": 20,
