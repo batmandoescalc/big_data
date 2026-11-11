@@ -1,5 +1,6 @@
 """Safety and evidence checks; never connect to the cluster."""
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
@@ -125,12 +126,15 @@ class ExperimentSafetyTests(unittest.TestCase):
             self.assertEqual(external.call_count, 2)
 
     def test_health_abort_kills_only_the_recorded_experiment_application(self):
+        events = []
+
         class Process:
             stdout = iter(['Submitted application application_1_1\n'])
             returncode = None
             def poll(self):
                 return self.returncode
             def terminate(self):
+                events.append('client stopped')
                 self.returncode = -15
             def wait(self, timeout=None):
                 return self.returncode
@@ -157,12 +161,74 @@ class ExperimentSafetyTests(unittest.TestCase):
                  patch.object(burst, 'exists', return_value=False), \
                  patch.object(burst, 'run', return_value=''), \
                  patch.object(burst, 'health', side_effect=[{}, RuntimeError('unhealthy')]), \
+                 patch.object(burst, 'api', return_value={}), \
+                 patch.object(burst.time, 'sleep'), \
                  patch.object(burst.subprocess, 'Popen', return_value=Process()), \
-                 patch.object(burst.subprocess, 'run') as external, \
+                 patch.object(burst.subprocess, 'run', side_effect=lambda *a, **k: (
+                     events.append('application cancelled'),
+                     SimpleNamespace(returncode=0))[1]) as external, \
                  patch.object(burst.threading, 'Thread', ImmediateThread):
                 self.assertEqual(burst.launch(args), 1)
             external.assert_called_once_with(['yarn', 'application', '-kill', 'application_1_1'],
                                               stdin=burst.subprocess.DEVNULL, timeout=30)
+            self.assertEqual(events, ['client stopped', 'application cancelled'])
+            manifest = json.loads((root / 'evidence' / 'manifest.json').read_text())
+            self.assertEqual(manifest['cancelled_application_ids'], ['application_1_1'])
+            self.assertEqual(manifest['cancel_failed_application_ids'], [])
+
+
+def listing(*apps):
+    return {'apps': {'app': [dict(id=i, name=n, user=u, state=s) for i, n, u, s in apps]}}
+
+
+class AbortCleanupTests(unittest.TestCase):
+    """An aborted stage cancels every application it owns, including late ones, and no one else's."""
+
+    def cancel(self, listings, known=(), results=None):
+        results = results or SimpleNamespace(returncode=0)
+        with patch.object(burst, 'TRANSPORT', None), \
+             patch.object(burst, 'api', side_effect=listings), \
+             patch.object(burst.time, 'sleep'), \
+             patch.object(burst.subprocess, 'run', **(
+                 dict(side_effect=results) if isinstance(results, list)
+                 else dict(return_value=results))) as external:
+            outcome = burst.cancel_stage_applications('unused', {'week09-s-alice-0', 'week09-s-alice-1'},
+                                                      'alice', set(known))
+        return outcome, [call.args[0][-1] for call in external.call_args_list]
+
+    def test_application_that_appears_after_the_abort_is_still_cancelled(self):
+        late = listing(('application_1_2', 'week09-s-alice-1', 'alice', 'ACCEPTED'))
+        (cancelled, failed), killed = self.cancel([{}, late] + [late] * burst.CLEANUP_POLLS,
+                                                  known=['application_1_1'])
+        self.assertEqual(killed, ['application_1_1', 'application_1_2'])
+        self.assertEqual((cancelled, failed), (['application_1_1', 'application_1_2'], []))
+
+    def test_same_name_from_another_user_and_other_names_are_never_cancelled(self):
+        apps = listing(('application_1_5', 'week09-s-alice-0', 'bob', 'RUNNING'),
+                       ('application_1_6', 'week09-s-alice-00', 'alice', 'RUNNING'),
+                       ('application_1_7', 'week09-s-alice-0', 'alice', 'RUNNING'))
+        _, killed = self.cancel([apps] * burst.CLEANUP_POLLS)
+        self.assertEqual(killed, ['application_1_7'])
+
+    def test_finished_application_is_left_alone(self):
+        apps = listing(('application_1_1', 'week09-s-alice-0', 'alice', 'FINISHED'))
+        _, killed = self.cancel([apps] * burst.CLEANUP_POLLS, known=['application_1_1'])
+        self.assertEqual(killed, [])
+
+    def test_one_timed_out_cancel_does_not_skip_the_rest_and_is_reported(self):
+        timeout = burst.subprocess.TimeoutExpired('yarn', 30)
+        done = SimpleNamespace(returncode=0)
+        results = [timeout, done] + [timeout] * (burst.CLEANUP_POLLS - 1)
+        (cancelled, failed), killed = self.cancel([{}] * burst.CLEANUP_POLLS,
+                                                  known=['application_1_1', 'application_1_2'],
+                                                  results=results)
+        self.assertEqual(killed[:2], ['application_1_1', 'application_1_2'])
+        self.assertEqual((cancelled, failed), (['application_1_2'], ['application_1_1']))
+
+    def test_unreachable_resourcemanager_still_cancels_known_applications(self):
+        (cancelled, failed), killed = self.cancel(OSError('no route'), known=['application_1_1'])
+        self.assertEqual((cancelled, failed, killed),
+                         (['application_1_1'], [], ['application_1_1']))
 
 
 if __name__ == '__main__':

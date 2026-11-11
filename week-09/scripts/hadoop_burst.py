@@ -25,6 +25,13 @@ SSH_KEY = None
 REMOTE_ROOT = None
 HADOOP_HOME = None
 SSH_READY = '__WEEK09_SSH_READY__'
+# YARN states in which an application is over and has nothing left to cancel.
+TERMINAL_STATES = ('FINISHED', 'FAILED', 'KILLED')
+# After an abort, list this stage's applications this many times, this far
+# apart. A client can submit just before it is stopped, and the application
+# then shows up in YARN a few seconds later.
+CLEANUP_POLLS = 5
+CLEANUP_POLL_SECONDS = 2
 sys.path.insert(0, str(ROOT / 'week-07/scripts'))
 from event_generator import generate_events
 from streaming import FlajoletMartin
@@ -118,6 +125,57 @@ def api(base, endpoint):
         return json.loads(run(['python3', '-c', code]))
     with urllib.request.urlopen(url, timeout=10) as response:
         return json.load(response)
+
+
+def stage_applications(base, names, user):
+    """This stage's applications: exact job name and exact owner, nothing else.
+
+    Every lookup and every cancel goes through this match, so the launcher
+    cannot touch another user's application or an unrelated one.
+    """
+    apps = api(base, 'apps').get('apps') or {}
+    return [app for app in apps.get('app', [])
+            if app.get('name') in names and app.get('user') == user]
+
+
+def stop_clients(processes):
+    """Stop every job client and wait until each one is gone."""
+    for process in processes:
+        if process.poll() is None:
+            process.terminate()
+    for process in processes:
+        try:
+            process.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+
+
+def cancel_stage_applications(base, names, user, known_ids):
+    """Cancel every unfinished application of this stage; return (cancelled, failed).
+
+    The list is read again several times because an application can appear
+    after the abort. A cancel that fails or times out is retried on the next
+    pass and never stops the other cancels.
+    """
+    pending, finished, cancelled = set(known_ids), set(), set()
+    for attempt in range(CLEANUP_POLLS):
+        if attempt:
+            time.sleep(CLEANUP_POLL_SECONDS)
+        try:
+            for app in stage_applications(base, names, user):
+                (finished if app.get('state') in TERMINAL_STATES else pending).add(app['id'])
+        except Exception as exc:
+            print(f'Cleanup could not list applications ({exc}); using known IDs.', flush=True)
+        for app_id in sorted(pending - finished - cancelled):
+            try:
+                done = subprocess.run(execution(['yarn', 'application', '-kill', app_id]),
+                                      stdin=subprocess.DEVNULL, timeout=30)
+                if done.returncode == 0:
+                    cancelled.add(app_id)
+            except (subprocess.TimeoutExpired, OSError) as exc:
+                print(f'Cancel of {app_id} did not finish ({exc}); will retry.', flush=True)
+    return sorted(cancelled), sorted(pending - finished - cancelled)
 
 
 def host_snapshot(host):
@@ -267,7 +325,7 @@ def launch(args):
                     queue_time_note='observed RUNNING means application manager running, not first task')
     processes, readers = [], []
     abort_reason = None
-    seen_ids = set()
+    names = {row['name']: row for row in rows}
     snapshots = (args.evidence / 'observations.jsonl').open('w')
 
     def read_log(process, row, ready):
@@ -318,23 +376,20 @@ def launch(args):
                 metrics = health(args.rm_url, hosts)
                 snapshots.write(json.dumps(dict(time=now, metrics=metrics)) + '\n')
                 last_health = now
-            apps = api(args.rm_url, 'apps').get('apps') or {}
-            for app in apps.get('app', []):
-                for row in rows:
-                    # Exact unique name and owner also discover IDs if the client
-                    # has not printed one yet. Never cancel an unrelated app.
-                    if app.get('name') == row['name'] and app.get('user') == user:
-                        seen_ids.add(app['id'])
-                        row['application_id'] = app['id']
-                        if row.get('state') != app['state']:
-                            print(f'Job {row["index"]}: {app["state"]}', flush=True)
-                        row['state'] = app['state']
-                        row['final_status'] = app['finalStatus']
-                        row['rm_started_ms'] = app.get('startedTime')
-                        row['rm_finished_ms'] = app.get('finishedTime')
-                        if app['state'] == 'RUNNING' and 'first_observed_running_epoch' not in row:
-                            row['first_observed_running_epoch'] = now
-                        snapshots.write(json.dumps(dict(time=now, app=app)) + '\n')
+            # The exact name and owner match also discovers an ID that the
+            # client has not printed yet.
+            for app in stage_applications(args.rm_url, names, user):
+                row = names[app['name']]
+                row['application_id'] = app['id']
+                if row.get('state') != app['state']:
+                    print(f'Job {row["index"]}: {app["state"]}', flush=True)
+                row['state'] = app['state']
+                row['final_status'] = app['finalStatus']
+                row['rm_started_ms'] = app.get('startedTime')
+                row['rm_finished_ms'] = app.get('finishedTime')
+                if app['state'] == 'RUNNING' and 'first_observed_running_epoch' not in row:
+                    row['first_observed_running_epoch'] = now
+                snapshots.write(json.dumps(dict(time=now, app=app)) + '\n')
             snapshots.flush()
             for process, row in zip(processes, rows):
                 if process.poll() is not None and 'client_finished_epoch' not in row:
@@ -349,21 +404,25 @@ def launch(args):
         abort_reason = str(exc) or 'interrupted'
         print('Stopping this stage: ' + abort_reason, flush=True)
         manifest['abort_reason'] = abort_reason
-        # IDs came from exact name+owner REST matches or each owned client log.
-        seen_ids.update(row['application_id'] for row in rows if 'application_id' in row)
-        for app_id in sorted(seen_ids):
-            subprocess.run(execution(['yarn', 'application', '-kill', app_id]),
-                           stdin=subprocess.DEVNULL, timeout=30)
-        for process in processes:
-            if process.poll() is None:
-                process.terminate()
+        # Stop the clients first so nothing new is submitted during cleanup.
+        try:
+            stop_clients(processes)
+        except Exception as exc:
+            print(f'Could not confirm every job client stopped: {exc}', flush=True)
+            manifest['client_stop_error'] = str(exc)
+        # Known IDs come from this stage's own client logs and from exact
+        # name and owner matches; cleanup looks again for late ones.
+        known_ids = {row['application_id'] for row in rows if 'application_id' in row}
+        try:
+            cancelled, failed = cancel_stage_applications(args.rm_url, set(names), user, known_ids)
+        except Exception as exc:
+            cancelled, failed = [], sorted(known_ids)
+            print(f'Cleanup stopped early: {exc}', flush=True)
+        manifest.update(cancelled_application_ids=cancelled, cancel_failed_application_ids=failed)
+        if failed:
+            print('NOT CANCELLED, cancel these by hand: ' + ' '.join(failed), flush=True)
     finally:
-        for process in processes:
-            try:
-                process.wait(timeout=15)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait()
+        stop_clients(processes)
         for reader in readers:
             reader.join(timeout=5)
         snapshots.close()
