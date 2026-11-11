@@ -46,8 +46,8 @@ log is worth keeping, as `week-04/docs/example-run-log.txt` does.
   version. Give each new test class a one-line docstring; the test report
   prints it.
 - Branch from `dev` as `<name>/week-NN-topic` and open a pull request into
-  `dev`. Do not merge it: the supervisor reviews. `main` only moves at
-  reviewed checkpoints. See [CONTRIBUTING.md](CONTRIBUTING.md).
+  `dev`. Merge it only after a teammate or the supervisor has looked at it
+  and the checks pass. `main` only moves at reviewed checkpoints. See [CONTRIBUTING.md](CONTRIBUTING.md).
 - A week's overview is its `README.md`; supporting material goes in that
   week's `docs/`, `scripts/`, and `tests/`. Code shared across weeks goes in
   `common/`.
