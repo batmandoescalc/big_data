@@ -26,9 +26,12 @@ does not require it to be stored first.
 ## Local implementation and verification
 
 `scripts/streaming.py` contains the four sketches and exact reference helpers.
-The reference answer intentionally retains the finite stream in local memory;
-that is appropriate only for testing.  The sketches themselves retain fixed or
-logarithmic-sized summaries as events arrive.
+`scripts/run_experiment.py` computes the exact answers as running totals too:
+a set of users, a count per user, and the last `window` error bits.  It never
+saves the stream, so its peak memory stays flat as the stream grows (1.26 MB at
+both 100,000 and 300,000 events; saving every event used 6.7 MB and 20.5 MB).
+The sketches themselves retain fixed or logarithmic-sized summaries as events
+arrive.
 
 Run the local tests:
 

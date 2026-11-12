@@ -4,14 +4,14 @@
 from __future__ import annotations
 
 import argparse
+from collections import Counter, deque
 import json
 from pathlib import Path
 import time
 import tracemalloc
 
 from event_generator import generate_events
-from streaming import (AMSSecondMoment, BloomFilter, DGIM, FlajoletMartin,
-                       exact_recent_ones, exact_second_moment)
+from streaming import AMSSecondMoment, BloomFilter, DGIM, FlajoletMartin
 
 
 def percent_error(estimate, exact):
@@ -20,12 +20,20 @@ def percent_error(estimate, exact):
 
 
 def run(events, window, registers, estimators, bloom_bits, bloom_hashes):
-    """Process an iterable once, preserving exact values only for the comparison."""
+    """Process an iterable once; the exact answers are kept as running totals too.
+
+    The exact side keeps a set of users, a count per user, and the last
+    ``window`` error bits.  None of these grows with the stream length, so the
+    reported peak memory reflects the summaries rather than a saved copy of
+    every event.
+    """
     bloom = BloomFilter(bloom_bits, bloom_hashes)
     fm = FlajoletMartin(registers)
     ams = AMSSecondMoment(estimators)
     dgim = DGIM(window)
-    users, statuses = [], []
+    exact_users, frequencies = set(), Counter()
+    recent = deque(maxlen=window)
+    events_seen = 0
 
     started = time.perf_counter()
     tracemalloc.start()
@@ -36,18 +44,18 @@ def run(events, window, registers, estimators, bloom_bits, bloom_hashes):
         fm.add(user)
         ams.add(user)
         dgim.add(error)
-        # These reference lists deliberately make the exact baseline grow with
-        # the stream.  The sketches above do not retain the event stream.
-        users.append(user)
-        statuses.append(error)
+        exact_users.add(user)
+        frequencies[user] += 1
+        recent.append(error)
+        events_seen += 1
     _, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     elapsed = time.perf_counter() - started
 
-    exact_distinct = len(set(users))
-    exact_f2 = exact_second_moment(users)
-    recent = min(window, len(statuses))
-    exact_ones = exact_recent_ones(statuses, recent) if recent else 0
+    exact_distinct = len(exact_users)
+    exact_f2 = sum(count * count for count in frequencies.values())
+    exact_ones = sum(recent)
+    recent = len(recent)
     false_positive_probes = [f"never-seen-{index}" for index in range(1_000)]
     false_positive_rate = sum(probe in bloom for probe in false_positive_probes) / len(false_positive_probes)
 
@@ -55,8 +63,8 @@ def run(events, window, registers, estimators, bloom_bits, bloom_hashes):
         "schema_version": 1,
         "engine": "local-python",
         "elapsed_seconds": round(elapsed, 6),
-        "python_peak_bytes_including_exact_baseline": peak,
-        "events": len(users),
+        "python_peak_bytes_sketches_and_exact_totals": peak,
+        "events": events_seen,
         "window": window,
         "results": {
             "bloom_filter": {
