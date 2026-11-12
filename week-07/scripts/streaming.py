@@ -187,14 +187,18 @@ class DGIM:
         if not 1 <= last <= self.window:
             raise ValueError("last must be between 1 and the configured window")
         cutoff = self.time - last
+        # Section 4.6.4: add every bucket whose newest bit is inside the range,
+        # but count only half of the oldest such bucket, because it may stick
+        # out past the start of the range.  Buckets older than the cutoff hold
+        # no in-range bits and are not counted at all.
         total = 0.0
+        oldest = 0
         for size, timestamp in self.buckets:
-            if timestamp > cutoff:
-                total += size
-            else:
-                total += size / 2
+            if timestamp <= cutoff:
                 break
-        return total
+            total += size
+            oldest = size
+        return total - oldest / 2
 
     @property
     def memory_bytes(self) -> int:

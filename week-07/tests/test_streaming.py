@@ -167,9 +167,30 @@ class DocumentedStreamTests(unittest.TestCase):
         self.assertEqual(exact_second_moment(users), 22)
         self.assertEqual(ams.estimate(), 22.75)
         self.assertEqual(sum(errors), 4)
-        self.assertEqual(dgim.estimate(), 4.0)
+        # Book rule: the oldest in-range bucket (size 2) counts as half.
+        self.assertEqual(dgim.estimate(), 3.0)
         self.assertEqual((bloom.memory_bytes, fm.memory_bytes,
                           ams.memory_bytes, dgim.memory_bytes), (32, 16, 1024, 48))
+
+
+class DGIMEstimateRuleTests(unittest.TestCase):
+    """DGIM counts half of the oldest in-range bucket, never an expired one."""
+
+    def test_eight_ones_in_window_of_five(self):
+        dgim = DGIM(5)
+        for _ in range(8):
+            dgim.add(1)
+        # Buckets newest first: 1, 1, 2, 4.  All four end inside the window,
+        # so the estimate is 1 + 1 + 2 + 4/2 = 6 against an exact count of 5.
+        self.assertEqual([size for size, _ in dgim.buckets], [1, 1, 2, 4])
+        self.assertEqual(dgim.estimate(), 6.0)
+
+    def test_bucket_outside_the_range_is_not_counted(self):
+        dgim = DGIM(8)
+        for bit in [1, 1, 0, 0, 0, 0]:
+            dgim.add(bit)
+        # Both ones are older than the last 4 events, so nothing is in range.
+        self.assertEqual(dgim.estimate(last=4), 0.0)
 
 
 if __name__ == "__main__":
