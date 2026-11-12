@@ -1,5 +1,7 @@
 # Week 9: memory capacity and shared Hadoop jobs
 
+Pictures and a short summary: [Week 9 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-9:-Memory-Capacity-and-Shared-Hadoop-Jobs).
+
 This directory holds the memory-capacity and shared-job experiments for
 [Week 9, issue #24](https://github.com/batmandoescalc/big_data/issues/24).
 It measures retained-state memory on one worker and runs controlled submissions
