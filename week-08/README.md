@@ -209,38 +209,55 @@ cluster run's JSON records `estimates_match_reference: true`.  Results:
 [`results/cluster-full-day.json`](results/cluster-full-day.json),
 progress log [`results/cluster-run.log`](results/cluster-run.log).
 
-### FM as a Hadoop Streaming job
+## Sketch vs. exact on the real cluster
 
-`scripts/hadoop/` runs the FM sketch as a real MapReduce job:
+This is the fair speed comparison.  Two Hadoop Streaming jobs count the day's
+distinct pages through YARN on the class cluster: same 24 gzip files in HDFS,
+same Python, same nodes, same settings, 3 reducers each, run back to back on
+2026-11-11.  The only difference is what the mappers send through the shuffle.
 
-1. `fm_pageviews_mapper.py` hashes each page key once and prints only the
-   registers it touched (at most 4,096 lines per hour file).
-2. Hadoop sorts those lines by register number.
-3. Week 7's `fm_reducer.py` keeps the largest value per register.
-4. `fm_finish.py` turns the 4,096 merged registers into the estimate.  Week 7's
-   Hadoop job stopped at the register array and never printed a count; this
-   step closes that gap.
+- **FM job.**  `fm_pageviews_mapper.py` hashes each page key and prints only
+  the registers it touched (at most 4,096 lines per file).  Week 7's
+  `fm_reducer.py` keeps the largest value per register, and `fm_finish.py`
+  turns the 4,096 merged registers into the estimate.
+- **Exact job.**  `exact_distinct_mapper.py` prints every page key.  Hadoop
+  sorts them, so each `exact_distinct_reducer.py` counts a key once when it
+  changes, and `exact_distinct_finish.py` adds the reducers' counts.
 
-Students cannot write to HDFS yet (issue #19), so
-`run-fm-pageviews-local.sh` runs Hadoop in local mode: input and output on
-the head node's own disk, one JVM with a 512 MB heap, `nice -n 19`, no
-cluster settings changed.  It refuses to overwrite earlier output.
+| | FM sketch | Exact count |
+| --- | ---: | ---: |
+| Answer | 51,087,463 (3.26% high) | 49,476,423 (exact) |
+| Wall clock | 143 s | 231 s |
+| Lines into mappers | 135,421,176 | 135,421,176 |
+| Lines through the shuffle | 98,304 | 135,421,176 |
+| Bytes through the shuffle | 0.95 MB | 2.71 GB |
+| Records spilled to disk | 196,608 | 406,263,528 |
+| CPU time, all tasks | 466 s | 1,117 s |
+| Peak reducer memory | 281 MB | 753 MB |
 
-| | Value |
-| --- | --- |
-| Map tasks | 24 (one per gzip file; gzip cannot be split) |
-| Lines read by mappers | 135,421,176 |
-| Lines sent through the shuffle | 98,304 (24 x 4,096), about 1,400 times fewer |
-| Wall clock | 5 min 39 s |
-| Estimate | 51,087,463.25, identical to the single-process sketch |
+Both jobs ran 24 map tasks (one per gzip file; gzip cannot be split), 21 of
+them on the node that held the data.  Both answers match the single-process
+run exactly.
 
-This is the point of FM in MapReduce: each mapper boils millions of lines
-down to a few kilobytes, and the merge is just "take the max".  Summary log:
-[`results/hadoop-fm-full-day.log`](results/hadoop-fm-full-day.log);
-merged registers: [`results/hadoop-fm-full-day-registers.tsv`](results/hadoop-fm-full-day-registers.tsv).
+What it says:
+
+- **The shuffle is the cost.**  Both jobs read the same 135 million lines.
+  The exact job then moves 2,850 times more bytes across the network and
+  sorts them, which costs 88 more seconds and 2.4 times the CPU.
+- **The gap grows with the data.**  FM's shuffle is capped at 4,096 lines
+  per mapper however big the input gets.  The exact job's shuffle grows with
+  every new line, and its reducers' memory grows with the number of pages.
+- **The price is 3.26% error** on this seed (expected about 1.6%).
+
+Sanitized results: [`results/cluster-distinct-run-1.tsv`](results/cluster-distinct-run-1.tsv).
+The runner refuses an output folder that already exists and never deletes
+anything in HDFS:
 
 ```bash
-bash week-08/scripts/hadoop/run-fm-pageviews-local.sh INPUT_DIR NEW_OUTPUT_DIR
+# On the controller, once: copy the day into your own HDFS home.
+bash week-08/scripts/hadoop/upload-pageviews-hdfs.sh LOCAL_DIR /user/NETID/week-08/pageviews-20261027
+bash week-08/scripts/hadoop/run-distinct-cluster.sh \
+  /user/NETID/week-08/pageviews-20261027 /user/NETID/week-08/NEW_RUN_NAME
 ```
 
 ## DGIM 4.6.6: reducing the error

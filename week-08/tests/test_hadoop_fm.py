@@ -57,8 +57,10 @@ class HadoopShippedFilesTests(unittest.TestCase):
     """The mapper runs with only the files the runner ships to Hadoop."""
 
     def test_mapper_runs_in_a_folder_holding_only_the_shipped_files(self):
-        runner = (HADOOP / "run-fm-pageviews-local.sh").read_text()
-        shipped = re.search(r'-files "([^"]+)"', runner).group(1).split(",")
+        runner = (HADOOP / "run-distinct-cluster.sh").read_text()
+        modules = re.search(r'modules="([^"]+)"', runner).group(1)
+        shipped = re.search(r'fm_files="([^"]+)"', runner).group(1)
+        shipped = shipped.replace("$modules", modules).split(",")
         names = {"$script_dir": str(HADOOP), "$week7": str(REDUCER.parents[1])}
         with tempfile.TemporaryDirectory() as task_dir:
             for entry in shipped:
