@@ -20,6 +20,11 @@ to work. For the full cross-week index of scripts and results, see the
 | ResourceManager | Controller service that accepts jobs and allocates containers across the workers. | 2 |
 | NodeManager | Worker service that launches and monitors containers on its machine. | 2 |
 | Container | A bounded slice of a worker's CPU and memory in which one map or reduce task runs. | 2-4 |
+| ApplicationMaster | The first container of every YARN application. It requests the job's other containers and tracks its tasks. The queue limits how much memory all ApplicationMasters may use, which caps how many applications run at once. | 9 |
+| Job client | The process that submits a job and waits for it, here the `hadoop jar` JVM. It runs on the machine that submitted the job (the controller), outside YARN's memory limits. | 9 |
+| Simultaneous-connection limit | The SSH server's cap on connections that have not finished signing in (`MaxStartups`). Connections over the cap are reset. | 9 |
+| RAM guard | The Week 9 launcher's rule that stops a stage when any VM has under 2 GiB of memory available. | 9 |
+| Client budget | The launcher's check, before submitting, that the controller has room for one job client per job and still stays above the RAM guard. | 9 |
 
 ## MapReduce
 

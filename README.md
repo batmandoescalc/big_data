@@ -7,7 +7,7 @@ The initial work connects the distributed-file-system and MapReduce concepts in
 
 ## Current phase
 
-Week 9 measures capped memory growth and prepares controlled shared Hadoop
+Week 9 measures capped memory growth and runs controlled shared Hadoop
 submissions, building on Week 7's streaming sketches. Start with the
 [repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
 functions and results, or [Week 9](week-09/README.md) for the newest work.

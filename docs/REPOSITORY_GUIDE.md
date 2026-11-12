@@ -13,6 +13,7 @@ contains the full explanation, commands, evidence, and limitations.
 | 4 | Similar-item search | Can minhash and LSH find replayed transcript passages without comparing every pair? |
 | 5 | Scaling and join design | When does Hadoop's fixed overhead become small relative to useful work? |
 | 6 | Midsemester checkpoint | Can a new reader find, run, and understand the accumulated work? |
+| 9 | Memory capacity and shared jobs | How much state fits in memory, and what gives way first when two users submit many jobs at once? |
 
 ## Architecture and data flow
 
@@ -46,6 +47,8 @@ Typical experiment flow:
 | Wikipedia preparation | `week-05/scripts/prepare_wikipedia.py` | Streams compressed XML into nested, complete-record TSV samples while preserving Unicode. |
 | Benchmark matrix | `week-05/scripts/run-benchmark-matrix.sh` | Runs repeated SQLite/Hadoop measurements and exact comparisons at increasing sizes. |
 | Runtime summary | `week-05/scripts/summarize_runs.py` | Summarizes successful JSON records, retaining first runs and reporting medians. |
+| Capped memory study | `week-09/scripts/run_memory_study.py` and `memory_probe.py` | Runs one memory-capped process at a time on a worker and records where an exact set is killed and an FM sketch is not. |
+| Job burst launcher | `week-09/scripts/hadoop_burst.py` | Starts N identical Hadoop Streaming jobs at an agreed time over one SSH connection, watches cluster health, checks each output, and on abort stops its job clients and cancels its own applications. |
 
 ## Key results
 
@@ -58,6 +61,8 @@ Typical experiment flow:
 | Buffer-free join | The Week 5 one-job replicated join reproduced all Apollo category totals and reduced observed Hadoop time from about 95 seconds to about 47 seconds. |
 | Scaling curve | Across authentic Wikipedia samples, every SQLite/Hadoop aggregate matched. The Hadoop/SQLite median ratio narrowed from 419.7x at 2 MiB to 1.09x at 2 GiB. |
 | Spark estimate | Spark would likely reduce repeated multi-stage overhead, but a cold Spark/YARN job would still have startup cost and is unlikely to beat SQLite on tiny input. |
+| Memory capacity | Under 128, 256, and 512 MiB caps an exact set was killed at about 1.1, 2.4, and 4.8 million keys. A 16-register FM sketch finished one million keys at about 15 MiB. |
+| Shared job bursts | Two accounts ran 1, 2, and 4 jobs each and every output matched. At 10 each the SSH connection limit stopped every job. At 15 each the job clients exhausted controller memory and the round was interrupted: 16 completed, 14 cancelled. |
 
 ## Where to go next
 
