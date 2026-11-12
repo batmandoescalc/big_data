@@ -1,5 +1,7 @@
 # Week 8: Streaming Sketches on Real Wikipedia Traffic
 
+Pictures and a short summary: [Week 8 wiki page](https://github.com/batmandoescalc/big_data/wiki/Week-8:-Streaming-Sketches-on-Real-Wikipedia-Traffic).
+
 ## Goal
 
 Week 7 built four stream summaries (Bloom, Flajolet-Martin, AMS, DGIM) and
