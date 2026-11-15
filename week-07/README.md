@@ -26,9 +26,12 @@ does not require it to be stored first.
 ## Local implementation and verification
 
 `scripts/streaming.py` contains the four sketches and exact reference helpers.
-The reference answer intentionally retains the finite stream in local memory;
-that is appropriate only for testing.  The sketches themselves retain fixed or
-logarithmic-sized summaries as events arrive.
+`scripts/run_experiment.py` computes the exact answers as running totals too:
+a set of users, a count per user, and the last `window` error bits.  It never
+saves the stream, so its peak memory stays flat as the stream grows (1.26 MB at
+both 100,000 and 300,000 events; saving every event used 6.7 MB and 20.5 MB).
+The sketches themselves retain fixed or logarithmic-sized summaries as events
+arrive.
 
 Run the local tests:
 
@@ -57,10 +60,13 @@ comparison with Hadoop.
 | Bloom filter | 1,000 inserted users had no false negatives | 0.0% positives on 1,000 known-absent probes | 16,384 bytes |
 | FM distinct users | 1,000 | 1,015.6 (1.56% error) | 128 bytes |
 | AMS second moment | 109,934 | 109,687.5 (0.22% error) | 1,024 bytes |
-| DGIM recent errors | 35 in the last 1,024 events | 46 (31.43% error) | 144 bytes |
+| DGIM recent errors | 35 in the last 1,024 events | 38 (8.57% error) | 144 bytes |
 
-The low-probability error stream makes the DGIM percentage look large: an
-absolute difference of 11 events is within the method's intended rough
+Week 8 corrected the DGIM estimate to the book's rule (count half of the
+oldest bucket inside the range, not the bucket just outside it); the
+original Week 7 run reported 46 (31.43% error).  The low-probability error
+stream can still make the DGIM percentage look large: an
+absolute difference of a few events is within the method's intended rough
 approximation.  A later run should repeat seeds and report a range, rather
 than treating one generated stream as a universal accuracy claim.
 
