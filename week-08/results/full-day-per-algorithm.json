@@ -1,0 +1,101 @@
+{
+  "dataset": {
+    "hours": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "lines": 135421176,
+    "views": 381871445,
+    "bytes_gz": 1194014319
+  },
+  "baseline_read_parse_hash": {
+    "first": {
+      "pass_seconds": 184.9,
+      "peak_rss_mb": 18.5
+    },
+    "last": {
+      "pass_seconds": 189.0,
+      "peak_rss_mb": 18.7
+    }
+  },
+  "algorithms": {
+    "bloom": {
+      "sketch": {
+        "pass_seconds": 506.2,
+        "peak_rss_mb": 87.2
+      },
+      "exact": {
+        "pass_seconds": 221.1,
+        "peak_rss_mb": 141.8
+      },
+      "estimate": 4258683,
+      "exact_answer": 4254618,
+      "error_pct": 0.0955432426600931
+    },
+    "fm": {
+      "sketch": {
+        "pass_seconds": 218.6,
+        "peak_rss_mb": 18.6
+      },
+      "exact": {
+        "pass_seconds": 236.8,
+        "peak_rss_mb": 143.7
+      },
+      "estimate": 51087463.2,
+      "exact_answer": 49476423,
+      "error_pct": 3.256177593921863
+    },
+    "ams": {
+      "sketch": {
+        "pass_seconds": 217.3,
+        "peak_rss_mb": 21.1
+      },
+      "exact": {
+        "pass_seconds": 257.3,
+        "peak_rss_mb": 173.7
+      },
+      "estimate": 11674199403521.66,
+      "exact_answer": 11674468571039,
+      "error_pct": 0.002305608308437876
+    },
+    "dgim": {
+      "sketch": {
+        "pass_seconds": 185.5,
+        "peak_rss_mb": 18.7
+      },
+      "exact": {
+        "pass_seconds": 187.5,
+        "peak_rss_mb": 18.8
+      },
+      "estimate": 564.0,
+      "exact_answer": 461,
+      "error_pct": 22.342733188720175
+    }
+  },
+  "total_wall_seconds": 2404.2,
+  "machine": "Linux 6.18.58.1-microsoft-standard-WSL2 x86_64, 16 cores",
+  "python": "3.12.3",
+  "note": "Each pass ran once, alone, in its own process. pass_seconds includes reading, parsing and hashing (see baseline_read_parse_hash). peak_rss_mb is that process's peak resident memory. Exact methods for Bloom, FM and AMS write hashes to 64 partition files and total one partition at a time with Python set/dict, which run in C; the sketches are pure Python."
+}

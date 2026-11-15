@@ -1,0 +1,30 @@
+Four-sketch run on the class head node, 2026-11-03: Python 3.9.25, nice -n 19,
+ulimit -v 2 GB, --skip-exact --exact-from desktop-full-day.json. Per-hour progress:
+
+hour 00: 5,177,997 lines in 34.6 s
+hour 01: 4,911,514 lines in 31.2 s
+hour 02: 4,743,134 lines in 29.4 s
+hour 03: 4,730,129 lines in 29.6 s
+hour 04: 4,586,622 lines in 29.6 s
+hour 05: 4,456,901 lines in 29.1 s
+hour 06: 4,582,270 lines in 29.4 s
+hour 07: 4,929,872 lines in 31.8 s
+hour 08: 5,332,353 lines in 34.2 s
+hour 09: 5,565,728 lines in 35.0 s
+hour 10: 5,750,589 lines in 35.9 s
+hour 11: 5,909,903 lines in 37.0 s
+hour 12: 5,944,493 lines in 37.2 s
+hour 13: 6,225,724 lines in 39.4 s
+hour 14: 6,466,571 lines in 40.8 s
+hour 15: 6,540,777 lines in 41.2 s
+hour 16: 6,501,371 lines in 40.7 s
+hour 17: 6,390,962 lines in 40.2 s
+hour 18: 6,352,390 lines in 39.9 s
+hour 19: 6,374,960 lines in 40.2 s
+hour 20: 6,339,745 lines in 39.6 s
+hour 21: 6,232,903 lines in 39.8 s
+hour 22: 5,921,153 lines in 37.3 s
+hour 23: 5,453,115 lines in 31.8 s
+real	14m14.821s
+user	14m7.811s
+sys	0m2.003s

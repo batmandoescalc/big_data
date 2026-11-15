@@ -1,0 +1,3 @@
+job	reducers	wall_seconds	map_tasks	data_local_map_tasks	map_input_records	shuffle_records	shuffle_bytes	spilled_records	cpu_ms	peak_reduce_bytes	answer
+fm	3	143	24	21	135421176	98304	949696	196608	466030	281468928	51087463.24846185
+exact	3	231	24	21	135421176	135421176	2708423952	406263528	1116590	753250304	49476423

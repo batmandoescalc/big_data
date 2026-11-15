@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="396" viewBox="0 0 960 396" role="img" aria-label="DGIM error and memory for r = 2, 3, 5, 9">
+<style>
+  .surface { fill: #fcfcfb; }
+  .ink { fill: #0b0b0b; }
+  .ink2 { fill: #52514e; }
+  .axis { stroke: #8a8984; }
+  .grid { stroke: #e4e3df; }
+  .s1 { fill: #2a78d6; }
+  .s2 { fill: #eb6834; }
+  .bound { stroke: #0b0b0b; }
+  text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  @media (prefers-color-scheme: dark) {
+    .surface { fill: #1a1a19; }
+    .ink { fill: #f0efec; }
+    .ink2 { fill: #c3c2b7; }
+    .axis { stroke: #8f8e88; }
+    .grid { stroke: #34332f; }
+    .s1 { fill: #3987e5; }
+    .s2 { fill: #d95926; }
+    .bound { stroke: #f0efec; }
+  }
+</style>
+<rect class="surface" width="960" height="396" rx="8"/>
+<text class="ink" x="20" y="30" font-size="18" font-weight="600">Keeping more buckets per size shrinks DGIM's counting error</text>
+<text class="ink2" x="20" y="50" font-size="12">Window N = 1,000,000 bits. Error = |estimate - exact| / exact, over 200 query times x 60 range lengths</text>
+<text class="ink2" x="20" y="66" font-size="12">(ranges holding at least 10 ones). Dashed line = the textbook worst case, 1/(r-1).</text>
+<text class="ink" x="20" y="100" font-size="14" font-weight="600">Worst error seen</text>
+<line class="grid" x1="72" y1="312.0" x2="308.6666666666667" y2="312.0" stroke-width="1"/>
+<text class="ink2" x="66" y="316.0" font-size="11" text-anchor="end">0%</text>
+<line class="grid" x1="72" y1="262.5" x2="308.6666666666667" y2="262.5" stroke-width="1"/>
+<text class="ink2" x="66" y="266.5" font-size="11" text-anchor="end">30%</text>
+<line class="grid" x1="72" y1="213.0" x2="308.6666666666667" y2="213.0" stroke-width="1"/>
+<text class="ink2" x="66" y="217.0" font-size="11" text-anchor="end">60%</text>
+<line class="grid" x1="72" y1="163.5" x2="308.6666666666667" y2="163.5" stroke-width="1"/>
+<text class="ink2" x="66" y="167.5" font-size="11" text-anchor="end">90%</text>
+<line class="grid" x1="72" y1="114.0" x2="308.6666666666667" y2="114.0" stroke-width="1"/>
+<text class="ink2" x="66" y="118.0" font-size="11" text-anchor="end">120%</text>
+<line class="axis" x1="72" y1="312" x2="308.6666666666667" y2="312" stroke-width="1"/>
+<path class="s1" d="M79.0,312.0 V236.6 Q79.0,232.6 83.0,232.6 H96.6 Q100.6,232.6 100.6,236.6 V312.0 Z"><title>r=2: 48%</title></path>
+<path class="s2" d="M102.6,312.0 V234.7 Q102.6,230.7 106.6,230.7 H120.2 Q124.2,230.7 124.2,234.7 V312.0 Z"><title>r=2: 49%</title></path>
+<line class="bound" x1="74.0" y1="147.0" x2="129.2" y2="147.0" stroke-width="2" stroke-dasharray="4 3"/>
+<text class="ink2" x="101.6" y="328" font-size="11" text-anchor="middle">r=2 (before)</text>
+<path class="s1" d="M138.2,312.0 V276.3 Q138.2,272.3 142.2,272.3 H155.8 Q159.8,272.3 159.8,276.3 V312.0 Z"><title>r=3: 24%</title></path>
+<path class="s2" d="M161.8,312.0 V275.6 Q161.8,271.6 165.8,271.6 H179.3 Q183.3,271.6 183.3,275.6 V312.0 Z"><title>r=3: 24%</title></path>
+<line class="bound" x1="133.2" y1="229.5" x2="188.3" y2="229.5" stroke-width="2" stroke-dasharray="4 3"/>
+<text class="ink2" x="160.8" y="328" font-size="11" text-anchor="middle">r=3</text>
+<path class="s1" d="M197.3,312.0 V295.4 Q197.3,291.4 201.3,291.4 H214.9 Q218.9,291.4 218.9,295.4 V312.0 Z"><title>r=5: 12%</title></path>
+<path class="s2" d="M220.9,312.0 V295.4 Q220.9,291.4 224.9,291.4 H238.5 Q242.5,291.4 242.5,295.4 V312.0 Z"><title>r=5: 12%</title></path>
+<line class="bound" x1="192.3" y1="270.8" x2="247.5" y2="270.8" stroke-width="2" stroke-dasharray="4 3"/>
+<text class="ink2" x="219.9" y="328" font-size="11" text-anchor="middle">r=5</text>
+<path class="s1" d="M256.5,312.0 V299.5 Q256.5,295.5 260.5,295.5 H274.1 Q278.1,295.5 278.1,299.5 V312.0 Z"><title>r=9: 10%</title></path>
+<path class="s2" d="M280.1,312.0 V299.5 Q280.1,295.5 284.1,295.5 H297.7 Q301.7,295.5 301.7,299.5 V312.0 Z"><title>r=9: 10%</title></path>
+<line class="bound" x1="251.5" y1="291.4" x2="306.7" y2="291.4" stroke-width="2" stroke-dasharray="4 3"/>
+<text class="ink2" x="279.1" y="328" font-size="11" text-anchor="middle">r=9</text>
+<text class="ink2" x="190.3" y="343" font-size="11" text-anchor="middle">r = buckets kept per size</text>
+<text class="ink" x="326.6666666666667" y="100" font-size="14" font-weight="600">Average error</text>
+<line class="grid" x1="378.6666666666667" y1="312.0" x2="615.3333333333334" y2="312.0" stroke-width="1"/>
+<text class="ink2" x="372.6666666666667" y="316.0" font-size="11" text-anchor="end">0%</text>
+<line class="grid" x1="378.6666666666667" y1="262.5" x2="615.3333333333334" y2="262.5" stroke-width="1"/>
+<text class="ink2" x="372.6666666666667" y="266.5" font-size="11" text-anchor="end">5%</text>
+<line class="grid" x1="378.6666666666667" y1="213.0" x2="615.3333333333334" y2="213.0" stroke-width="1"/>
+<text class="ink2" x="372.6666666666667" y="217.0" font-size="11" text-anchor="end">10%</text>
+<line class="grid" x1="378.6666666666667" y1="163.5" x2="615.3333333333334" y2="163.5" stroke-width="1"/>
+<text class="ink2" x="372.6666666666667" y="167.5" font-size="11" text-anchor="end">15%</text>
+<line class="grid" x1="378.6666666666667" y1="114.0" x2="615.3333333333334" y2="114.0" stroke-width="1"/>
+<text class="ink2" x="372.6666666666667" y="118.0" font-size="11" text-anchor="end">20%</text>
+<line class="axis" x1="378.6666666666667" y1="312" x2="615.3333333333334" y2="312" stroke-width="1"/>
+<path class="s1" d="M385.7,312.0 V187.9 Q385.7,183.9 389.7,183.9 H403.2 Q407.2,183.9 407.2,187.9 V312.0 Z"><title>r=2: 13%</title></path>
+<path class="s2" d="M409.2,312.0 V191.3 Q409.2,187.3 413.2,187.3 H426.8 Q430.8,187.3 430.8,191.3 V312.0 Z"><title>r=2: 13%</title></path>
+<text class="ink2" x="408.2" y="328" font-size="11" text-anchor="middle">r=2 (before)</text>
+<path class="s1" d="M444.8,312.0 V238.6 Q444.8,234.6 448.8,234.6 H462.4 Q466.4,234.6 466.4,238.6 V312.0 Z"><title>r=3: 7.8%</title></path>
+<path class="s2" d="M468.4,312.0 V242.3 Q468.4,238.3 472.4,238.3 H486.0 Q490.0,238.3 490.0,242.3 V312.0 Z"><title>r=3: 7.4%</title></path>
+<text class="ink2" x="467.4" y="328" font-size="11" text-anchor="middle">r=3</text>
+<path class="s1" d="M504.0,312.0 V274.5 Q504.0,270.5 508.0,270.5 H521.6 Q525.6,270.5 525.6,274.5 V312.0 Z"><title>r=5: 4.2%</title></path>
+<path class="s2" d="M527.6,312.0 V276.4 Q527.6,272.4 531.6,272.4 H545.2 Q549.2,272.4 549.2,276.4 V312.0 Z"><title>r=5: 4.0%</title></path>
+<text class="ink2" x="526.6" y="328" font-size="11" text-anchor="middle">r=5</text>
+<path class="s1" d="M563.2,312.0 V292.9 Q563.2,288.9 567.2,288.9 H580.8 Q584.8,288.9 584.8,292.9 V312.0 Z"><title>r=9: 2.3%</title></path>
+<path class="s2" d="M586.8,312.0 V293.8 Q586.8,289.8 590.8,289.8 H604.3 Q608.3,289.8 608.3,293.8 V312.0 Z"><title>r=9: 2.2%</title></path>
+<text class="ink2" x="585.8" y="328" font-size="11" text-anchor="middle">r=9</text>
+<text class="ink2" x="497.0" y="343" font-size="11" text-anchor="middle">r = buckets kept per size</text>
+<text class="ink" x="633.3333333333334" y="100" font-size="14" font-weight="600">Memory (largest seen)</text>
+<line class="grid" x1="685.3333333333334" y1="312.0" x2="922.0" y2="312.0" stroke-width="1"/>
+<text class="ink2" x="679.3333333333334" y="316.0" font-size="11" text-anchor="end">0</text>
+<line class="grid" x1="685.3333333333334" y1="262.5" x2="922.0" y2="262.5" stroke-width="1"/>
+<text class="ink2" x="679.3333333333334" y="266.5" font-size="11" text-anchor="end">0.5 KiB</text>
+<line class="grid" x1="685.3333333333334" y1="213.0" x2="922.0" y2="213.0" stroke-width="1"/>
+<text class="ink2" x="679.3333333333334" y="217.0" font-size="11" text-anchor="end">1.0 KiB</text>
+<line class="grid" x1="685.3333333333334" y1="163.5" x2="922.0" y2="163.5" stroke-width="1"/>
+<text class="ink2" x="679.3333333333334" y="167.5" font-size="11" text-anchor="end">1.5 KiB</text>
+<line class="grid" x1="685.3333333333334" y1="114.0" x2="922.0" y2="114.0" stroke-width="1"/>
+<text class="ink2" x="679.3333333333334" y="118.0" font-size="11" text-anchor="end">2.0 KiB</text>
+<line class="axis" x1="685.3333333333334" y1="312" x2="922.0" y2="312" stroke-width="1"/>
+<path class="s1" d="M692.3,312.0 V284.3 Q692.3,280.3 696.3,280.3 H709.9 Q713.9,280.3 713.9,284.3 V312.0 Z"><title>r=2: 0.3 KiB</title></path>
+<path class="s2" d="M715.9,312.0 V279.6 Q715.9,275.6 719.9,275.6 H733.5 Q737.5,275.6 737.5,279.6 V312.0 Z"><title>r=2: 0.4 KiB</title></path>
+<text class="ink2" x="714.9" y="328" font-size="11" text-anchor="middle">r=2 (before)</text>
+<path class="s1" d="M751.5,312.0 V271.6 Q751.5,267.6 755.5,267.6 H769.1 Q773.1,267.6 773.1,271.6 V312.0 Z"><title>r=3: 0.4 KiB</title></path>
+<path class="s2" d="M775.1,312.0 V262.1 Q775.1,258.1 779.1,258.1 H792.7 Q796.7,258.1 796.7,262.1 V312.0 Z"><title>r=3: 0.5 KiB</title></path>
+<text class="ink2" x="774.1" y="328" font-size="11" text-anchor="middle">r=3</text>
+<path class="s1" d="M810.7,312.0 V244.7 Q810.7,240.7 814.7,240.7 H828.3 Q832.3,240.7 832.3,244.7 V312.0 Z"><title>r=5: 0.7 KiB</title></path>
+<path class="s2" d="M834.3,312.0 V228.9 Q834.3,224.9 838.3,224.9 H851.8 Q855.8,224.9 855.8,228.9 V312.0 Z"><title>r=5: 0.9 KiB</title></path>
+<text class="ink2" x="833.3" y="328" font-size="11" text-anchor="middle">r=5</text>
+<path class="s1" d="M869.8,312.0 V198.8 Q869.8,194.8 873.8,194.8 H887.4 Q891.4,194.8 891.4,198.8 V312.0 Z"><title>r=9: 1.2 KiB</title></path>
+<path class="s2" d="M893.4,312.0 V173.4 Q893.4,169.4 897.4,169.4 H911.0 Q915.0,169.4 915.0,173.4 V312.0 Z"><title>r=9: 1.4 KiB</title></path>
+<text class="ink2" x="892.4" y="328" font-size="11" text-anchor="middle">r=9</text>
+<text class="ink2" x="803.7" y="343" font-size="11" text-anchor="middle">r = buckets kept per size</text>
+<rect class="s1" x="20" y="372" width="12" height="12" rx="2"/>
+<text class="ink" x="38" y="382" font-size="12">Wikipedia hot pages (6,918 ones in 5,944,493 bits)</text>
+<rect class="s2" x="422.0" y="372" width="12" height="12" rx="2"/>
+<text class="ink" x="440.0" y="382" font-size="12">Synthetic coin flips (29,789 ones in 3,000,000 bits)</text>
+<line class="bound" x1="838.4000000000001" y1="378" x2="860.4000000000001" y2="378" stroke-width="2" stroke-dasharray="4 3"/>
+<text class="ink" x="866.4000000000001" y="382" font-size="12">bound 1/(r-1)</text>
+</svg>
