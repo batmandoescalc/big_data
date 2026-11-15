@@ -66,7 +66,7 @@ Typical experiment flow:
 ## Where to go next
 
 - New reader: start with the root `README.md`, then select a weekly README.
-  Keep the [glossary](GLOSSARY.md) open for unfamiliar terms.
+  Keep the [glossary](../GLOSSARY.md) open for unfamiliar terms.
 - Cluster operator: read `week-02/docs/cluster-setup.md` and the safety notes first.
 - Algorithm reader: use Weeks 3-7 and their tests as executable examples.
 - Decision reader: `docs/adr/` records the design choices that span weeks.

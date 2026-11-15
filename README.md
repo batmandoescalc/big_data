@@ -5,13 +5,6 @@ observing, and testing a small Hadoop cluster for large-scale data processing.
 The initial work connects the distributed-file-system and MapReduce concepts in
 *Mining of Massive Datasets* to a four-node RHEL 9 environment.
 
-## Current phase
-
-Week 7 adds local, reproducible Chapter 4 streaming-algorithm experiments and
-a bounded Hadoop Flajolet--Martin design. Start with the
-[repository guide](docs/REPOSITORY_GUIDE.md) for a cross-week index of the key
-functions and results, or [Week 7](week-07/README.md) for the newest work.
-
 ## Getting started
 
 You do not need cluster access to read the study or run its unit tests.
@@ -20,7 +13,7 @@ You do not need cluster access to read the study or run its unit tests.
    the core test suites.
 2. Clone the repository and enter its directory.
 3. Read the [repository guide](docs/REPOSITORY_GUIDE.md) to choose a topic.
-   Unfamiliar terms are defined in the [glossary](docs/GLOSSARY.md).
+   Unfamiliar terms are defined in the [glossary](GLOSSARY.md).
 4. Run every local check from the repository root:
 
    ```bash

@@ -38,7 +38,6 @@ request titled **Midsemester checkpoint**.
 - `scripts/preflight.sh`: retained read-only Week 2 VM inspection contribution.
 - `common/benchmark/run_timed.py`: retained inline explanation of the shared timer.
 - `week-06/README.md`: auditable record of the checkpoint.
-- `week-06/docs/wiki-page.md`: publishable Wiki version of this overview.
 
 ## Validation
 

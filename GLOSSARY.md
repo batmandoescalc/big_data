@@ -3,7 +3,7 @@
 Short definitions of the terms used across the weekly READMEs, in the order a
 new reader usually meets them. Each entry names the week where the idea is put
 to work. For the full cross-week index of scripts and results, see the
-[repository guide](REPOSITORY_GUIDE.md).
+[repository guide](docs/REPOSITORY_GUIDE.md).
 
 ## Cluster and Hadoop
 

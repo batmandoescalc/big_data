@@ -11,7 +11,7 @@ cluster. Every week follows the same loop:
 
 Start with [README.md](README.md), then
 [docs/REPOSITORY_GUIDE.md](docs/REPOSITORY_GUIDE.md) for the cross-week index.
-Use the terms in [docs/GLOSSARY.md](docs/GLOSSARY.md).
+Use the terms in [GLOSSARY.md](GLOSSARY.md).
 
 ## The cluster is live: hard rules
 
@@ -71,14 +71,7 @@ log is worth keeping, as `week-04/docs/example-run-log.txt` does.
 - Direct SSH to worker 2 has reset in the past for an undiagnosed reason.
   Reaching it through the controller works.
 
-## Agent skills
+## Where things are recorded
 
-### Issue tracker
-
-Issues live in this repository's GitHub Issues, used through the `gh` CLI.
-No triage labels are configured. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context: one glossary at `docs/GLOSSARY.md` and decision records in
-`docs/adr/`. See `docs/agents/domain.md`.
+Issues are on GitHub (use `gh`; no triage labels are configured). Terms are in
+[GLOSSARY.md](GLOSSARY.md) and decisions in [docs/adr/](docs/adr/).
