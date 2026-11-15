@@ -1,0 +1,96 @@
+{
+  "python": "3.9.25",
+  "platform": "Linux, cgroup v2",
+  "key_bytes": 32,
+  "input": "unique ASCII hexadecimal keys, generated and discarded",
+  "units": "MiB = 2^20 bytes; GB = 10^9 bytes",
+  "cases": [
+    {
+      "mode": "exact-set",
+      "cap_mib": 128,
+      "outcome": "cgroup-oom-kill",
+      "last_logged_records": 1125000,
+      "last_logged_peak_rss_mib": 135.0703125,
+      "last_logged_cgroup_peak_mib": 127.07421875,
+      "elapsed_to_last_log_seconds": 1.1004170710220933,
+      "next_checkpoint_records": 1150000,
+      "input_payload_gb_at_last_checkpoint": 0.036,
+      "cgroup_peak_mib_at_failure": 128
+    },
+    {
+      "mode": "exact-set",
+      "cap_mib": 256,
+      "outcome": "cgroup-oom-kill",
+      "last_logged_records": 2350000,
+      "last_logged_peak_rss_mib": 262.97265625,
+      "last_logged_cgroup_peak_mib": 255.08203125,
+      "elapsed_to_last_log_seconds": 2.213113387930207,
+      "next_checkpoint_records": 2375000,
+      "input_payload_gb_at_last_checkpoint": 0.0752,
+      "cgroup_peak_mib_at_failure": 256
+    },
+    {
+      "mode": "exact-set",
+      "cap_mib": 512,
+      "outcome": "cgroup-oom-kill",
+      "last_logged_records": 4800000,
+      "last_logged_peak_rss_mib": 518.3359375,
+      "last_logged_cgroup_peak_mib": 510.88671875,
+      "elapsed_to_last_log_seconds": 4.866089103976265,
+      "next_checkpoint_records": 4825000,
+      "input_payload_gb_at_last_checkpoint": 0.1536,
+      "cgroup_peak_mib_at_failure": 512
+    },
+    {
+      "mode": "fm",
+      "cap_mib": 128,
+      "outcome": "complete",
+      "last_logged_records": 250000,
+      "last_logged_peak_rss_mib": 15.125,
+      "last_logged_cgroup_peak_mib": 6.953125,
+      "elapsed_to_last_log_seconds": 7.983388800988905,
+      "logical_state_bytes": 16,
+      "registers": 16
+    },
+    {
+      "mode": "fm",
+      "cap_mib": 128,
+      "outcome": "complete",
+      "last_logged_records": 1000000,
+      "last_logged_peak_rss_mib": 15.125,
+      "last_logged_cgroup_peak_mib": 6.9453125,
+      "elapsed_to_last_log_seconds": 29.88055440201424,
+      "logical_state_bytes": 16,
+      "registers": 16
+    }
+  ],
+  "host_min_available_mib": 5101.4140625,
+  "swap_used_bytes": 0,
+  "planning_estimate": {
+    "before_available_mib": 5662.453125,
+    "reserved_headroom_mib": 2048,
+    "usable_for_model_bytes": 3790028800,
+    "observed_effective_bytes_per_key_range": [
+      111.84810666666667,
+      119.30464711111111
+    ],
+    "estimated_keys_range": [
+      31767654,
+      33885498
+    ],
+    "estimated_unique_key_payload_gb_range": [
+      1.01656494140625,
+      1.0843359375
+    ],
+    "limitation": "Illustrative extrapolation with 2 GiB reserve, not an observed VM crash. Set resize peaks, allocator behavior, keys and other workloads change the threshold.",
+    "unreserved_available_ram_keys_range": [
+      49767654,
+      53085498
+    ],
+    "unreserved_unique_key_payload_gb_range": [
+      1.59256494140625,
+      1.6987359375
+    ]
+  },
+  "memory_points_csv": "memory-repeat-summary-points.csv"
+}

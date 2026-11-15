@@ -1,0 +1,275 @@
+{
+  "note": "15 jobs per account, agreed start 2026-11-11T20:51:00Z. Times come from the ResourceManager record of each application, in seconds. Account A is the pull request author. queue_wait_s is submission to launch; null means the application never launched.",
+  "applications": [
+    {
+      "account": "account A",
+      "job": 0,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 41.8,
+      "queue_wait_s": 0.6,
+      "run_s": 20.6,
+      "finished_after_start_s": 63.1
+    },
+    {
+      "account": "account B",
+      "job": 12,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 52.4,
+      "queue_wait_s": 0.1,
+      "run_s": 44.2,
+      "finished_after_start_s": 96.7
+    },
+    {
+      "account": "account B",
+      "job": 9,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 53.0,
+      "queue_wait_s": 28.6,
+      "run_s": 30.2,
+      "finished_after_start_s": 111.8
+    },
+    {
+      "account": "account A",
+      "job": 1,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 54.1,
+      "queue_wait_s": 101.4,
+      "run_s": null,
+      "finished_after_start_s": 164.8
+    },
+    {
+      "account": "account A",
+      "job": 2,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 55.0,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 163.0
+    },
+    {
+      "account": "account B",
+      "job": 3,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.0,
+      "queue_wait_s": 152.2,
+      "run_s": 18.8,
+      "finished_after_start_s": 226.1
+    },
+    {
+      "account": "account B",
+      "job": 7,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.1,
+      "queue_wait_s": 48.1,
+      "run_s": 28.9,
+      "finished_after_start_s": 132.1
+    },
+    {
+      "account": "account B",
+      "job": 14,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.2,
+      "queue_wait_s": 63.3,
+      "run_s": 29.6,
+      "finished_after_start_s": 148.1
+    },
+    {
+      "account": "account B",
+      "job": 5,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.3,
+      "queue_wait_s": 177.8,
+      "run_s": 28.9,
+      "finished_after_start_s": 261.9
+    },
+    {
+      "account": "account B",
+      "job": 0,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.5,
+      "queue_wait_s": 83.9,
+      "run_s": 36.5,
+      "finished_after_start_s": 176.0
+    },
+    {
+      "account": "account B",
+      "job": 10,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.8,
+      "queue_wait_s": 166.8,
+      "run_s": 39.6,
+      "finished_after_start_s": 262.3
+    },
+    {
+      "account": "account B",
+      "job": 6,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 55.8,
+      "queue_wait_s": 126.8,
+      "run_s": 33.3,
+      "finished_after_start_s": 215.9
+    },
+    {
+      "account": "account B",
+      "job": 4,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 56.0,
+      "queue_wait_s": 108.8,
+      "run_s": 35.4,
+      "finished_after_start_s": 200.2
+    },
+    {
+      "account": "account B",
+      "job": 8,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 56.5,
+      "queue_wait_s": 245.4,
+      "run_s": 23.8,
+      "finished_after_start_s": 325.6
+    },
+    {
+      "account": "account B",
+      "job": 2,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 56.5,
+      "queue_wait_s": 212.8,
+      "run_s": 25.9,
+      "finished_after_start_s": 295.2
+    },
+    {
+      "account": "account B",
+      "job": 1,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 56.6,
+      "queue_wait_s": 260.5,
+      "run_s": 31.7,
+      "finished_after_start_s": 348.8
+    },
+    {
+      "account": "account B",
+      "job": 11,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 56.7,
+      "queue_wait_s": 211.7,
+      "run_s": 41.7,
+      "finished_after_start_s": 310.2
+    },
+    {
+      "account": "account B",
+      "job": 13,
+      "final": "SUCCEEDED",
+      "reached_yarn_after_start_s": 57.9,
+      "queue_wait_s": 274.4,
+      "run_s": 56.9,
+      "finished_after_start_s": 389.2
+    },
+    {
+      "account": "account A",
+      "job": 3,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 58.4,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 168.2
+    },
+    {
+      "account": "account A",
+      "job": 4,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 60.9,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 166.5
+    },
+    {
+      "account": "account A",
+      "job": 5,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 65.9,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 171.2
+    },
+    {
+      "account": "account A",
+      "job": 6,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 66.8,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 169.7
+    },
+    {
+      "account": "account A",
+      "job": 7,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 67.0,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 180.8
+    },
+    {
+      "account": "account A",
+      "job": 8,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 68.5,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 179.2
+    },
+    {
+      "account": "account A",
+      "job": 9,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 69.8,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 184.0
+    },
+    {
+      "account": "account A",
+      "job": 10,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 69.9,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 182.4
+    },
+    {
+      "account": "account A",
+      "job": 11,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 71.1,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 174.3
+    },
+    {
+      "account": "account A",
+      "job": 13,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 72.0,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 172.8
+    },
+    {
+      "account": "account A",
+      "job": 12,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 72.2,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 177.7
+    },
+    {
+      "account": "account A",
+      "job": 14,
+      "final": "KILLED",
+      "reached_yarn_after_start_s": 72.3,
+      "queue_wait_s": null,
+      "run_s": null,
+      "finished_after_start_s": 176.1
+    }
+  ]
+}

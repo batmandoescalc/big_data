@@ -1,0 +1,25 @@
+{
+  "records": 10000,
+  "users": 1000,
+  "pages": 100,
+  "seed": 4099,
+  "registers": 128,
+  "expected_sha256": "cd2836a77fb095fb0310c51681e713f01175eb81c7b48b77abbc5ec0a4f7ace2",
+  "files": [
+    {
+      "name": "events-0.jsonl",
+      "bytes": 256350,
+      "sha256": "84dd9d4c9b72623aa9fffc018849eebfeff3052cf22753a1684ac733d01c3b23"
+    },
+    {
+      "name": "events-1.jsonl",
+      "bytes": 256272,
+      "sha256": "ec23891e30da5889632be63930c6db7d51a0b5ca086ffe7aed95cb83ca6f56ca"
+    },
+    {
+      "name": "events-2.jsonl",
+      "bytes": 256272,
+      "sha256": "4098c096a371b21305ccc554d5afb394de1c71e5efddc8a7bd0875d5cc4f332f"
+    }
+  ]
+}

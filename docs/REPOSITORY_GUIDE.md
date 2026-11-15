@@ -14,6 +14,7 @@ contains the full explanation, commands, evidence, and limitations.
 | 5 | Scaling and join design | When does Hadoop's fixed overhead become small relative to useful work? |
 | 6 | Midsemester checkpoint | Can a new reader find, run, and understand the accumulated work? |
 | 7 | Mining data streams | Can a small fixed-size summary answer questions about a stream too large to keep? |
+| 9 | Memory capacity and shared jobs | How much state fits in memory, and what gives way first when two users submit many jobs at once? |
 
 ## Architecture and data flow
 
@@ -49,6 +50,8 @@ Typical experiment flow:
 | Runtime summary | `week-05/scripts/summarize_runs.py` | Summarizes successful JSON records, retaining first runs and reporting medians. |
 | Streaming sketches | `week-07/scripts/streaming.py` | Bloom filter, Flajolet-Martin, AMS, and DGIM, each processing one event at a time and checked against an exact answer. |
 | Hadoop Flajolet-Martin | `week-07/scripts/hadoop/fm_mapper.py` and `fm_reducer.py` | Mappers build per-partition registers; the reducer merges them with `max`. |
+| Capped memory study | `week-09/scripts/run_memory_study.py` and `memory_probe.py` | Runs one memory-capped process at a time on a worker and records where an exact set is killed and an FM sketch is not. |
+| Job burst launcher | `week-09/scripts/hadoop_burst.py` | Starts N identical Hadoop Streaming jobs at an agreed time over one SSH connection, watches cluster health, checks each output, and on abort stops its job clients and cancels its own applications. |
 
 ## Key results
 
@@ -62,6 +65,8 @@ Typical experiment flow:
 | Scaling curve | Across authentic Wikipedia samples, every SQLite/Hadoop aggregate matched. The Hadoop/SQLite median ratio narrowed from 419.7x at 2 MiB to 1.09x at 2 GiB. |
 | Spark estimate | Spark would likely reduce repeated multi-stage overhead, but a cold Spark/YARN job would still have startup cost and is unlikely to beat SQLite on tiny input. |
 | Streaming sketches | On a 10,000-event stream with 1,000 users, Flajolet-Martin estimated 1,015.6 distinct users (1.56% error) in 128 bytes and AMS estimated the second moment within 0.22% in 1,024 bytes. |
+| Memory capacity | Under 128, 256, and 512 MiB caps an exact set was killed at about 1.1, 2.4, and 4.8 million keys. A 16-register FM sketch finished one million keys at about 15 MiB. |
+| Shared job bursts | Two accounts ran 1, 2, and 4 jobs each and every output matched. At 10 each the SSH connection limit stopped every job. At 15 each the job clients exhausted controller memory and the round was interrupted: 16 completed, 14 cancelled. |
 
 ## Where to go next
 
