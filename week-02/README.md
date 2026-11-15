@@ -15,7 +15,7 @@ The practical work this week connected Week 1's distributed-storage and MapReduc
 - [Word-count code](scripts/wordcount/): our mapper, reducer, and Hadoop launcher.
 - [Dataset notes](docs/datasets/apollo11.md) and [downloader](scripts/fetch_apollo11.py).
 - [Cluster setup](docs/cluster-setup.md), [installer](hadoop-poc-rhel9.sh), and [verification script](scripts/verify-cluster.sh).
-- [Tests](tests/), [current status](docs/STATUS.md), and [handoff](docs/HANDOFF.md).
+- [Tests](tests/).
 
 Run commands in the supporting docs from the repository root unless they specify a controller session.
 

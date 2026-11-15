@@ -57,7 +57,7 @@ testing, review, and data-safety workflow.
 The installer now keeps controller and worker services separate. Software is
 installed on all four VMs, and the distributed storage and MapReduce acceptance
 test passed.
-See [the current status](week-02/docs/STATUS.md).
+See [the cluster setup notes](week-02/docs/cluster-setup.md).
 
 ## Coursework by week
 

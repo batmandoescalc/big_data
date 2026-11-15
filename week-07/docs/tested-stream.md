@@ -32,7 +32,7 @@ AMS estimators with seed 4099, and an eight-event DGIM window.
 | Bloom filter | All four inserted users present; no false negatives | Expected behavior | 32 bytes |
 | Flajolet--Martin | 4.298 distinct users | 4 exact (7.45% high) | 16 bytes |
 | AMS | 22.75 second moment | 22 exact (3.41% high) | 1,024 bytes |
-| DGIM | 4 recent errors | 4 exact | 48 bytes |
+| DGIM | 3 recent errors | 4 exact (25% low) | 48 bytes |
 
 FM's register array is
 `[2, 4, 3, 1, 1, 4, 1, 4, 1, 1, 2, 2, 2, 2, 2, 1]`. In the Hadoop
