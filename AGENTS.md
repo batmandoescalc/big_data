@@ -71,14 +71,6 @@ log is worth keeping, as `week-04/docs/example-run-log.txt` does.
 - Direct SSH to worker 2 has reset in the past for an undiagnosed reason.
   Reaching it through the controller works.
 
-## Agent skills
+## Open work
 
-### Issue tracker
-
-Issues live in this repository's GitHub Issues, used through the `gh` CLI.
-No triage labels are configured. See `docs/agents/issue-tracker.md`.
-
-### Domain docs
-
-Single-context: one glossary at `docs/GLOSSARY.md` and decision records in
-`docs/adr/`. See `docs/agents/domain.md`.
+GitHub issues in this repository, through the `gh` CLI. Glossary at `docs/GLOSSARY.md`, decision records in `docs/adr/`.
